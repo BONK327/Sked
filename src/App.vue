@@ -221,44 +221,52 @@
 export default {
 
 }
-  
+
 
 
 </script>
 
 <style lang="sass">
-* 
+$color-white: #ffffff
+$color-light-green: #3DB95E
+$color-dark-green: #33984E
+$color-light-grey: #CFCFCF
+$color-dark-grey: #ACACAC
+$color-table-border: #D9D9D9
+$color-text: #1E1E1E
+$color-orange: #FFAC52
+*
   margin: 0
   padding: 0
   box-sizing: border-box
 
 
-html 
+html
   font-size: 62.5%
 
 
-body 
+body
   font-family: 'Roboto', sans-serif
   background-color: #212529
-  color: #1E1E1E
+  color: $color-text
 
 
-.container 
+.container
   margin: 0 auto
   max-width: 30rem
   height: 64rem
-  background-color: white
+  background-color: $color-white
   position: relative
   z-index: 0
 
 
-.grid 
+.grid
   padding: 2rem 2rem 0 2rem
 
 
-.top 
+.top
   margin-bottom: 2rem
-  &__title 
+  &__title
     font-size: 1.6rem
     font-weight: 600
     letter-spacing: -2%
@@ -267,30 +275,30 @@ body
 
 
 
-.slider 
+.slider
   display: flex
   width: 100%
   justify-content: space-between
   margin: 0 auto 1.5rem auto
   align-items: center
-  &__day 
+  &__day
     justify-items: center
     cursor: pointer
-    &-date 
+    &-date
       font-size: 0.8rem
       font-weight: 400
       line-height: 0.9rem
-    &-week 
+    &-week
       font-size: 1.6rem
       font-weight: 400
       line-height: 1.9rem
     &-prev-active,
-    &-active 
-      background-color: #CFCFCF
+    &-active
+      background-color: $color-light-grey
       border-radius: 0.3rem
       padding: 0.4rem
       position: relative
-      &:after 
+      &:after
         content: ''
         z-index: -1
         position: absolute
@@ -299,51 +307,51 @@ body
         width: 100%
         height: 100%
         border-radius: 0.3rem
-        background-color: #ACACAC
-    &-active 
-      background-color: #3DB95E
+        background-color: $color-dark-grey
+    &-active
+      background-color: $color-light-green
       color: white
-      &:after 
-        background-color: #33984E
-    
+      &:after
+        background-color: $color-dark-green
 
-.name 
+
+.name
   display: flex
   gap: 0.5rem
   margin-bottom: 1.5rem
   align-items: center
   &__title,
-  &__slash 
+  &__slash
     font-size: 2.4rem
     font-weight: 400
     letter-spacing: -0.05rem
-  &__week 
+  &__week
     font-size: 1.4rem
     font-weight: 400
     letter-spacing: -0.05rem
 
 
-.search 
+.search
   display: flex
   flex-wrap: nowrap
   justify-content: space-between
   align-items: center
   margin-bottom: 1.5rem
-  &__input 
+  &__input
     padding: 0.9rem 1rem
-    border: solid 0.1rem #D9D9D9
+    border: solid 0.1rem $color-light-grey
     border-radius: 0.3rem
     width: 100%
     height: 3rem
     margin-right: 1rem
-    &::placeholder 
+    &::placeholder
       font-size: 1rem
       line-height: 1.2rem
       font-weight: 400
-      color: #D9D9D9
+      color: $color-table-border
   &__loupe
     position: relative
-    background-color: #3DB95E
+    background-color: $color-light-green
     border-radius: 0.3rem
     padding: 0.8rem
     width: 3rem
@@ -361,83 +369,83 @@ body
       width: 100%
       height: 100%
       border-radius: 0.3rem
-      background-color: #33984E
-  
+      background-color: $color-dark-green
 
-.table 
+
+.table
   width: 100%
   min-height: 100%
-  background-color: #D9D9D9
+  background-color: $color-table-border
   border-radius: 0.3rem 0.3rem 0 0
   overflow: hidden
   margin-bottom: 1.5rem
   display: flex
   flex-direction: column
-  &__title 
+  &__title
     font-size: 1.2rem
     font-weight: 400
     padding: 0.5rem 1rem
-    background-color: #3DB95E
-    color: white
-  &__content 
+    background-color: $color-light-green
+    color: $color-white
+  &__content
     width: 100%
     border-collapse: collapse
     display: flex
     flex-direction: column
-    &-row 
+    &-row
       position: relative
       display: flex
       width: 100%
       justify-content: space-between
-      &-time 
+      &-time
         align-self: center
         padding: 1.5rem 0.5rem
         flex: 0 0 auto
-      &-color--seminar 
+      &-color--seminar
         width: 0.75rem
-        background-color: #D9D9D9
+        background-color: $color-table-border
         flex: 0 0 auto
-      &-color--lection 
+      &-color--lection
         width: 0.75rem
-        background-color: #FFAC52
+        background-color: $color-orange
         flex: 0 0 auto
-      &-lesson 
+      &-lesson
         padding: 0.5rem 0.8rem
         flex: 1
-        &--class 
+        &--class
           display: inline-block
           line-height: 1rem
           margin-bottom: 0.2rem
-        &--teacher 
-          color: #3DB95E
-      &-room 
+        &--teacher
+          color: $color-light-green
+      &-room
         align-self: flex-start
         text-align: center
         padding: 0.5rem 0.3rem 0.5rem 0
         flex: 0 0 auto
-        &--num 
+        &--num
           letter-spacing: -0.03rem
-        &-note 
+        &-note
           margin-top: 0.3rem
           cursor: pointer
 
-    tr 
+    tr
       height: 5rem
       background-color: white
-      border: solid 0.1rem #D9D9D9
+      border: solid 0.1rem $color-table-border
       margin-top: -0.1rem
     th,
-    td 
+    td
       font-size: 0.8rem
       font-weight: 400
 
 
-.btns 
+.btns
   display: flex
   flex-wrap: nowrap
   justify-content: space-between
   gap: 1rem
-.btn 
+.btn
   position: relative
   min-width: 45%
   max-height: 3rem
@@ -447,10 +455,10 @@ body
   font-weight: 400
   letter-spacing: -0.02rem
   align-items: center
-  background-color: #3DB95E
+  background-color: $color-light-green
   border: none
   border-radius: 0.3rem
-  color: white
+  color: $color-white
   padding: 0.7rem
   gap: 0.7rem
   justify-content: space-around
@@ -462,17 +470,17 @@ body
     left: 0.1rem
     width: 100%
     height: 100%
-    background-color: #33984E
+    background-color: $color-dark-green
     border-radius: 0.3rem
     z-index: -1
-  &__full-sked 
+  &__full-sked
     width: 1.3rem
-  &__note 
+  &__note
     width: 1.4rem
 
 
-.footer 
-  background-color: #3DB95E
+.footer
+  background-color: $color-light-green
   position: absolute
   display: flex
   justify-content: space-around
