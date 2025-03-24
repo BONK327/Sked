@@ -7,9 +7,10 @@
 <script>
 export default {
   name: 'Header',
-  data() {
-    return {
-      title: 'Расписание'
+  props: {
+    title: {
+      type: String,
+      required: true
     }
   }
 }

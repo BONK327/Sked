@@ -40,7 +40,7 @@ export default {
 </script>
 
 <style lang="sass" scoped>
-@import "@/assets/styles/variables.sass"
+@import "@/assets/styles/variables"
 .slider
   display: flex
   width: 100%

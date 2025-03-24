@@ -2,38 +2,40 @@
   <div class="schedule">
     <div class="container">
       <div class="grid">
-        <Header/>
-        <Slider/>
-        <GroupInfo/>
-        <Search/>
-        <Schedule/>
-        <Buttons/>
-        <Footer/>
-
+        <keep-alive>
+          <component :is="currentComponent"></component>
+        </keep-alive>
       </div>
     </div>
+    <Footer/>
   </div>
 </template>
 
 <script>
-import Header from "@/components/header.vue";
-import Slider from "@/components/Slider.vue";
-import GroupInfo from "@/components/GroupInfo.vue";
-import Search from "@/components/Search.vue";
-import Schedule from "@/components/Schedule.vue";
-import Buttons from "@/components/UI/Buttons.vue";
-import Footer from "@/components/Footer.vue";
+import { mapGetters } from 'vuex'
+import sked from "@/components/Sked/sked.vue"
+import Notes from "@/views/Notes.vue"
+import Footer from "@/components/Footer.vue"
 
 export default {
   name: 'App',
-  components: {Footer, Buttons, Schedule, Search, GroupInfo, Slider, Header}
-
+  components: {
+    Footer,
+    sked,
+    Notes
+  },
+  computed: {
+    ...mapGetters(['activeTab']),
+    currentComponent() {
+      return this.activeTab === 'schedule' ? 'sked' : 'Notes'
+    }
+  }
 }
-
 </script>
 
 <style lang="sass">
 @import "@/assets/styles/variables.sass"
+@import "@/assets/styles/mixins.sass"
 
 *
   margin: 0
@@ -42,20 +44,35 @@ export default {
 
 html
   font-size: 62.5%
+  background-color: #212529
 
 body
   font-family: 'Roboto', sans-serif
-  background-color: #212529
   color: $color-text
+  margin: 0 auto
+  max-width: $content-max-width
+  background-color: $color-white
+  min-height: 100vh
+  position: relative
 
 .container
-  margin: 0 auto
-  max-width: 30rem
-  height: 64rem
-  background-color: $color-white
+  width: 100%
+  min-height: calc(100vh - #{$footer-height})
+  padding: 2rem
   position: relative
   z-index: 0
+  transition: all 0.3s ease
 
-.grid
-  padding: 2rem 2rem 0 2rem
+  @media (max-width: $mobile-breakpoint)
+    padding: 1rem
+
+// Анимация переключения вкладок
+.fade-enter-active,
+.fade-leave-active
+  transition: opacity 0.3s, transform 0.3s
+
+.fade-enter,
+.fade-leave-to
+  opacity: 0
+  transform: translateY(10px)
 </style>

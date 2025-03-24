@@ -15,7 +15,7 @@ export default {
 </script>
 
 <style lang="sass" scoped>
-@import "@/assets/styles/variables.sass"
+@import "@/assets/styles/variables"
 .search
   display: flex
   flex-wrap: nowrap

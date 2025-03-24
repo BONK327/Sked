@@ -30,17 +30,16 @@ export default {
 }
 </script>
 
-<style lang="sass" scoped>
-@import "@/assets/styles/variables"
+<style lang="sass">
+@import "@/assets/styles/variables.sass"
 .btns
   display: flex
   flex-wrap: nowrap
   justify-content: space-between
   gap: 1rem
+  max-height: 3rem
 .btn
   position: relative
-  min-width: 45%
-  max-height: 3rem
   display: flex
   flex-wrap: nowrap
   font-size: 1rem
@@ -69,4 +68,8 @@ export default {
     width: 1.3rem
   &__note
     width: 1.4rem
+  &__notes
+    position: absolute
+    right: 2rem
+    bottom: 7rem
 </style>
