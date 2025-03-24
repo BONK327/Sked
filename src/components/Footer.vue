@@ -92,6 +92,7 @@ export default {
     position: relative
     cursor: pointer
     padding: 8px
+    height: 100%
     border-radius: 8px
     transition: all 0.3s ease
     flex: 1
@@ -112,5 +113,6 @@ export default {
 
   .active-tab
     background-color: rgba(255, 255, 255, 0.2)
+    height: 100%
     box-shadow: 0 2px 8px rgba(0,0,0,0.1)
 </style>

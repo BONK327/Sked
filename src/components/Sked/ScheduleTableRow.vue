@@ -68,6 +68,7 @@ export default {
 
 <style lang="sass" scoped>
 @import "@/assets/styles/variables.sass"
+@import "@/assets/styles/mixins.sass"
 
 .table
   width: 100%
@@ -145,8 +146,10 @@ export default {
 
     th,
     td
-      font-size: 0.8rem
+      font-size: 1rem
       font-weight: 400
       box-sizing: border-box
       overflow-wrap: break-word
+      @include respond(small-phone)
+        font-size: 0.8rem
 </style>

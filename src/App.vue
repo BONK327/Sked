@@ -43,7 +43,16 @@ export default {
   box-sizing: border-box
 
 html
-  font-size: 62.5%
+  @include respond(computer)
+    font-size: 80%
+  @include respond(tab-lend)
+    font-size: 75%
+  @include respond(tab-port)
+    font-size: 70%
+  @include respond(phone)
+    font-size: 67.5%
+  @include respond(small-phone)
+    font-size: 62.5%
   background-color: #212529
 
 body
@@ -62,9 +71,6 @@ body
   position: relative
   z-index: 0
   transition: all 0.3s ease
-
-  @media (max-width: $mobile-breakpoint)
-    padding: 1rem
 
 // Анимация переключения вкладок
 .fade-enter-active,
