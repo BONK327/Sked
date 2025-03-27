@@ -3,7 +3,8 @@ import { createStore } from 'vuex'
 export default createStore({
     state: {
         notes: JSON.parse(localStorage.getItem('notes')) || [],
-        activeTab: 'schedule' // Добавляем новое состояние
+        activeTab: 'schedule',
+        selectedDay: null
     },
     mutations: {
         ADD_NOTE(state, note) {
@@ -19,6 +20,9 @@ export default createStore({
         },
         SET_ACTIVE_TAB(state, tab) { // Новая мутация
             state.activeTab = tab
+        },
+        SET_SELECTED_DAY(state, day) {
+            state.selectedDay = day
         }
     },
     actions: {
@@ -30,10 +34,14 @@ export default createStore({
         },
         setActiveTab({ commit }, tab) { // Новое действие
             commit('SET_ACTIVE_TAB', tab)
+        },
+        setSelectedDay({ commit }, day) {
+            commit('SET_SELECTED_DAY', day)
         }
     },
     getters: {
         getNotes: state => state.notes,
-        activeTab: state => state.activeTab // Новый геттер
+        activeTab: state => state.activeTab, // Новый геттер
+        selectedDay: state => state.selectedDay
     }
 })

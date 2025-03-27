@@ -54,16 +54,16 @@ export default {
   gap: 0.7rem
   justify-content: space-around
   cursor: pointer
-  &:before
-    content: ''
-    position: absolute
-    top: 0.2rem
-    left: 0.1rem
-    width: 100%
-    height: 100%
-    background-color: $color-dark-green
-    border-radius: 0.3rem
-    z-index: -1
+  //&:before
+  //  content: ''
+  //  position: absolute
+  //  top: 0.2rem
+  //  left: 0.1rem
+  //  width: 100%
+  //  height: 100%
+  //  background-color: $color-dark-green
+  //  border-radius: 0.3rem
+  //  z-index: -1
   &__full-sked
     width: 1.3rem
   &__note

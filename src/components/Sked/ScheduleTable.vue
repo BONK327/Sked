@@ -1,16 +1,36 @@
 <template>
   <section class="table">
-    <h2 class="table__title">Суббота | 10 февраля</h2>
+    <h2 class="table__title">{{ formattedDate }}</h2>
     <ScheduleTableContent />
   </section>
 </template>
 
 <script>
+import { mapGetters } from 'vuex'
 import ScheduleTableContent from "@/components/Sked/ScheduleTableContent.vue";
+
 export default {
   name: 'ScheduleTable',
   components: {
     ScheduleTableContent
+  },
+  computed: {
+    ...mapGetters(['selectedDay']),
+    formattedDate() {
+      if (this.selectedDay) {
+        return `${this.selectedDay.fullDayName} | ${this.selectedDay.date} ${this.selectedDay.month}`;
+      }
+
+      // Дефолтные значения при первой загрузке
+      const today = new Date();
+      const dayNames = ['Воскресенье', 'Понедельник', 'Вторник',
+        'Среда', 'Четверг', 'Пятница', 'Суббота'];
+      const monthNames = ['января', 'февраля', 'марта', 'апреля',
+        'мая', 'июня', 'июля', 'августа',
+        'сентября', 'октября', 'ноября', 'декабря'];
+
+      return `${dayNames[today.getDay()]} | ${today.getDate()} ${monthNames[today.getMonth()]}`;
+    }
   }
 }
 </script>

@@ -29,6 +29,22 @@ export default {
     currentComponent() {
       return this.activeTab === 'schedule' ? 'sked' : 'Notes'
     }
+  },
+  created() {
+    // Инициализация текущей даты при загрузке
+    const today = new Date();
+    const dayNames = ['Воскресенье', 'Понедельник', 'Вторник',
+      'Среда', 'Четверг', 'Пятница', 'Суббота'];
+    const monthNames = ['января', 'февраля', 'марта', 'апреля',
+      'мая', 'июня', 'июля', 'августа',
+      'сентября', 'октября', 'ноября', 'декабря'];
+
+    this.$store.dispatch('setSelectedDay', {
+      fullDayName: dayNames[today.getDay()],
+      date: today.getDate(),
+      month: monthNames[today.getMonth()],
+      originalDate: today
+    });
   }
 }
 </script>

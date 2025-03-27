@@ -115,4 +115,8 @@ export default {
     background-color: rgba(255, 255, 255, 0.2)
     height: 100%
     box-shadow: 0 2px 8px rgba(0,0,0,0.1)
+    svg
+      transform: scale(1.1)
+    &:hover
+      transform: none
 </style>
