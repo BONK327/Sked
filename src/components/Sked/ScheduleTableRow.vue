@@ -8,29 +8,30 @@
     </td>
     <td class="table__content-row-room">
       <span class="table__content-row-room--num">{{ row.room }}</span>
-      <br>
-      <svg
-          v-if="hasNote"
-          @click="handleNoteClick"
-          class="table__content-row-room-note"
-          width="15"
-          height="16"
-          viewBox="0 0 15 16"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-      >
-        <path d="M12.3333 8.33333V6.33333C12.3333 4.13333 12.3333 3.03333 11.65 2.35C10.9667 1.66667 9.86667 1.66667 7.66667 1.66667H5.66667C3.46667 1.66667 2.36667 1.66667 1.68333 2.35C1 3.03333 1 4.13333 1 6.33333V9.66667C1 11.8667 1 12.9667 1.68333 13.65C2.36667 14.3333 3.46667 14.3333 5.66667 14.3333H6.66667M10 1V2.33333M6.66667 1V2.33333M3.33333 1V2.33333M8.33333 13C8.33333 13 9 13 9.66667 14.3333C9.66667 14.3333 11.7847 11 13.6667 10.3333M4 9.66667H6.66667M4 6.33333H9.33333"
-              stroke="#3DB95E"
-              stroke-width="1.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"/>
-      </svg>
+      <div class="table__content-row-room-note-container">
+        <svg
+            v-if="hasNote"
+            @click="handleNoteClick"
+            class="table__content-row-room-note"
+            width="18"
+            height="18"
+            viewBox="0 0 15 16"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+          <path d="M12.3333 8.33333V6.33333C12.3333 4.13333 12.3333 3.03333 11.65 2.35C10.9667 1.66667 9.86667 1.66667 7.66667 1.66667H5.66667C3.46667 1.66667 2.36667 1.66667 1.68333 2.35C1 3.03333 1 4.13333 1 6.33333V9.66667C1 11.8667 1 12.9667 1.68333 13.65C2.36667 14.3333 3.46667 14.3333 5.66667 14.3333H6.66667M10 1V2.33333M6.66667 1V2.33333M3.33333 1V2.33333M8.33333 13C8.33333 13 9 13 9.66667 14.3333C9.66667 14.3333 11.7847 11 13.6667 10.3333M4 9.66667H6.66667M4 6.33333H9.33333"
+                stroke="#3DB95E"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"/>
+        </svg>
+      </div>
     </td>
   </tr>
 </template>
 
 <script>
-import { mapActions } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 export default {
   name: 'ScheduleTableRow',
@@ -42,22 +43,39 @@ export default {
   },
   computed: {
     hasNote() {
+      const selectedDate = this.$store.getters.selectedDay?.originalDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
       return this.$store.getters.getNotes.some(note =>
           note.lesson === this.row.lesson &&
-          note.time === this.row.time
+          note.time === this.row.time &&
+          note.date === selectedDate
       )
     }
   },
   methods: {
-    ...mapActions(['addNote']),
+    ...mapActions(['addNote', 'setActiveTab', 'setActiveNote']),
     handleNoteClick() {
-      if (!this.hasNote) {
+      const selectedDate = this.$store.getters.selectedDay?.originalDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
+
+      if (this.hasNote) {
+        const note = this.$store.getters.getNotes.find(note =>
+            note.lesson === this.row.lesson &&
+            note.time === this.row.time &&
+            note.date === selectedDate
+        )
+
+        if (note) {
+          this.setActiveTab('notes')
+          setTimeout(() => {
+            this.setActiveNote(note.id)
+          }, 100)
+        }
+      } else {
         const newNote = {
           id: Date.now(),
           lesson: this.row.lesson,
           time: this.row.time,
           content: '',
-          date: new Date().toISOString().split('T')[0]
+          date: selectedDate
         }
         this.addNote(newNote)
       }
@@ -131,11 +149,21 @@ export default {
         display: flex
         flex-direction: column
         align-items: flex-end
+        position: relative
         &--num
           letter-spacing: -0.03rem
         &-note
           margin-top: 0.3rem
           cursor: pointer
+          transition: transform .2s ease
+          &:hover
+            transform: scale(1.1)
+          &-container
+            display: flex
+            justify-content: flex-end
+            align-items: center
+            height: 100%
+            padding-top: 0.3rem
 
     tr
       min-height: 5rem

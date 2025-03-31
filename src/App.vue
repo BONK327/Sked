@@ -7,6 +7,7 @@
         </keep-alive>
       </div>
     </div>
+    <AddNoteModal />
     <Footer/>
   </div>
 </template>
@@ -16,13 +17,15 @@ import { mapGetters } from 'vuex'
 import sked from "@/components/Sked/sked.vue"
 import Notes from "@/views/Notes.vue"
 import Footer from "@/components/Footer.vue"
+import AddNoteModal from "@/components/AddNoteModal.vue"
 
 export default {
   name: 'App',
   components: {
     Footer,
     sked,
-    Notes
+    Notes,
+    AddNoteModal
   },
   computed: {
     ...mapGetters(['activeTab']),
@@ -31,13 +34,9 @@ export default {
     }
   },
   created() {
-    // Инициализация текущей даты при загрузке
     const today = new Date();
-    const dayNames = ['Воскресенье', 'Понедельник', 'Вторник',
-      'Среда', 'Четверг', 'Пятница', 'Суббота'];
-    const monthNames = ['января', 'февраля', 'марта', 'апреля',
-      'мая', 'июня', 'июля', 'августа',
-      'сентября', 'октября', 'ноября', 'декабря'];
+    const dayNames = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+    const monthNames = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 
     this.$store.dispatch('setSelectedDay', {
       fullDayName: dayNames[today.getDay()],
