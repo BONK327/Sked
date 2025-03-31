@@ -47,7 +47,7 @@ export default {
   display: flex
   flex-direction: column
   &__title
-    font-size: 1.2rem
+    font-size: 1.5rem
     font-weight: 400
     padding: 0.5rem 1rem
     background-color: $color-light-green

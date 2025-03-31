@@ -80,7 +80,7 @@ export default {
   transform: translateX(-50%)
   z-index: 100
   box-shadow: 0 -2px 10px rgba(0,0,0,0.1)
-  border-radius: 12px 12px 0 0
+  border-radius: .8rem .8rem 0 0
   transition: all 0.3s ease
 
   @media (max-width: $mobile-breakpoint)
@@ -91,9 +91,9 @@ export default {
   &__double
     position: relative
     cursor: pointer
-    padding: 8px
+    padding: .8rem
     height: 100%
-    border-radius: 8px
+    border-radius: .8rem .8rem 0 0
     transition: all 0.3s ease
     flex: 1
     display: flex
@@ -101,22 +101,26 @@ export default {
     align-items: center
 
     svg
-      width: 28px
-      height: 28px
+      width: 2.5rem
+      height: 2.5rem
       transition: transform 0.3s ease
 
-    &:hover
-      transform: translateY(-2px)
-
-      svg
-        transform: scale(1.1)
+    // Hover-эффекты только для устройств с мышью
+    @media (hover: hover) and (pointer: fine)
+      &:hover
+        transform: translateY(-.2rem)
+        svg
+          transform: scale(1.1)
 
   .active-tab
     background-color: rgba(255, 255, 255, 0.2)
     height: 100%
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1)
+    box-shadow: 0 .2rem .8rem rgba(0,0,0,0.1)
     svg
       transform: scale(1.1)
-    &:hover
-      transform: none
+
+    // Отключаем hover для активной вкладки
+    @media (hover: hover) and (pointer: fine)
+      &:hover
+        transform: none
 </style>

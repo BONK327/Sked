@@ -1,6 +1,6 @@
 <template>
   <section class="btns">
-    <button class="btn">Полное расписание
+    <button class="btn btn__width">Полное расписание
       <span>
             <svg class="btn__full-sked" width="23" height="23" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
               <g clip-path="url(#clip0_135_258)">
@@ -14,7 +14,7 @@
             </svg>
           </span>
     </button>
-    <button class="btn">Добавить заметку
+    <button class="btn btn__width">Добавить заметку
       <span>
             <svg class="btn__note" width="23" height="25" viewBox="0 0 23 25" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M19.7895 13.65V10.2C19.7895 6.405 19.7895 4.5075 18.6566 3.32875C17.5237 2.15 15.7 2.15 12.0526 2.15H8.73684C5.08947 2.15 3.26579 2.15 2.13289 3.32875C1 4.5075 1 6.405 1 10.2V15.95C1 19.745 1 21.6425 2.13289 22.8212C3.26579 24 5.08947 24 8.73684 24H10.3947M15.9211 1V3.3M10.3947 1V3.3M4.86842 1V3.3M13.1579 21.7C13.1579 21.7 14.2632 21.7 15.3684 24C15.3684 24 18.8798 18.25 22 17.1M5.97368 15.95H10.3947M5.97368 10.2H14.8158" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -32,17 +32,19 @@ export default {
 
 <style lang="sass">
 @import "@/assets/styles/variables.sass"
+
 .btns
   display: flex
   flex-wrap: nowrap
   justify-content: space-between
   gap: 1rem
   max-height: 3rem
+
 .btn
   position: relative
   display: flex
   flex-wrap: nowrap
-  font-size: 1rem
+  font-size: 1.2rem
   font-weight: 400
   letter-spacing: -0.02rem
   align-items: center
@@ -52,22 +54,30 @@ export default {
   color: $color-white
   padding: 0.7rem
   gap: 0.7rem
-  justify-content: space-around
+  justify-content: space-evenly
   cursor: pointer
-  //&:before
-  //  content: ''
-  //  position: absolute
-  //  top: 0.2rem
-  //  left: 0.1rem
-  //  width: 100%
-  //  height: 100%
-  //  background-color: $color-dark-green
-  //  border-radius: 0.3rem
-  //  z-index: -1
+  transition: all .2s ease
+
+  // Hover-эффекты только для устройств с мышью
+  @media (hover: hover) and (pointer: fine)
+    &:hover
+      background-color: rgba(255, 255, 255, 0.2)
+      box-shadow: 0 .2rem 1rem rgba(0,0,0,0.1)
+      color: $color-light-green
+      .btn__full-sked path
+        fill: $color-light-green
+      .btn__note path
+        stroke: $color-light-green
+
+  &__width
+    min-width: 45%
+
   &__full-sked
-    width: 1.3rem
+    width: 1.5rem
+
   &__note
-    width: 1.4rem
+    width: 1.5rem
+
   &__notes
     position: absolute
     right: 2rem

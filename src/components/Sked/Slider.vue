@@ -153,6 +153,7 @@ export default {
 
 <style lang="sass" scoped>
 @import "@/assets/styles/variables"
+
 .slider
   display: flex
   width: 100%
@@ -171,8 +172,12 @@ export default {
     min-width: 1.2rem
     min-height: 1.2rem
     transition: transform 0.2s
-    &:hover:not(.slider__arrow-disabled)
-      transform: scale(1.3)
+
+    // Hover-эффекты только для устройств с мышью
+    @media (hover: hover) and (pointer: fine)
+      &:hover:not(.slider__arrow-disabled)
+        transform: scale(1.3)
+
     &:active:not(.slider__arrow-disabled)
       transform: scale(0.8)
 
@@ -188,6 +193,13 @@ export default {
     padding: .4rem
     min-width: 3rem
     position: relative
+    transition: all .3s ease
+
+    // Hover-эффекты только для устройств с мышью
+    @media (hover: hover) and (pointer: fine)
+      &:hover
+        border-radius: .3rem
+        box-shadow: 0 .2rem .8rem rgba(0,0,0,0.2)
 
     .date-container
       height: 1rem
@@ -217,6 +229,11 @@ export default {
       color: white
       border-radius: 0.3rem
       transition: all .3s ease
+
+      // Отключаем hover для активного элемента
+      @media (hover: hover) and (pointer: fine)
+        &:hover
+          box-shadow: none
 
 // Анимации изменения даты
 .date-flip-enter-active,
