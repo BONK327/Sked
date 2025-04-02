@@ -65,6 +65,7 @@ export default {
 <style lang="sass" scoped>
 @import "@/assets/styles/variables.sass"
 
+
 .footer
   background-color: $color-light-green
   display: flex

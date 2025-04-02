@@ -1,26 +1,23 @@
 <template>
   <div class="notes">
     <Header title="Заметки"/>
-    <div v-if="selectedDay" class="notes-date">
-      {{ formattedDate }}
-    </div>
-    <div v-if="filteredNotes.length > 0" class="notes-list">
+    <div v-if="notes.length > 0" class="notes-list">
       <div
-          v-for="note in filteredNotes"
+          v-for="note in sortedNotes"
           :key="note.id"
           class="note-item"
           :class="{ 'note-item--active': note.id === activeNoteId }"
-          ref="noteItems"
           :data-note-id="note.id"
       >
         <div class="note-header">
-          <h3 class="note-lesson">{{ note.lesson }}</h3>
+          <div class="note-meta">
+            <span class="note-date">{{ formatDate(note.date) }}</span>
+            <span class="note-time">{{ note.time }}</span>
+          </div>
           <div class="note-actions">
             <button
-                v-if="!editingNote || editingNote.id !== note.id"
                 @click="startEditing(note)"
                 class="note-edit-btn"
-                :disabled="hasNoteForLesson(note)"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M8 13.3333H14M11 2.33333L13.6667 5L5.66667 13H3V10.3333L11 2.33333Z" stroke="#3DB95E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -33,26 +30,27 @@
             </button>
           </div>
         </div>
-        <div class="note-time" v-html="note.time"></div>
-        <div class="note-meta">
-          <span class="note-teacher">{{ note.teacher }}</span>
-          <span class="note-room">{{ note.room }}</span>
-        </div>
-
-        <div v-if="editingNote && editingNote.id === note.id" class="note-edit">
-          <textarea
-              v-model="editingNote.content"
-              class="note-edit-textarea"
-              placeholder="Введите текст заметки..."
-              ref="textarea"
-          ></textarea>
-          <div class="note-edit-actions">
-            <button @click="cancelEditing" class="note-edit-cancel">Отмена</button>
-            <button @click="saveNote" class="note-edit-save">Сохранить</button>
+        <div class="note-content-wrapper">
+          <h3 class="note-lesson">{{ note.lesson }}</h3>
+          <div class="note-details">
+            <span class="note-teacher">{{ note.teacher }}</span>
+            <span class="note-room">{{ note.room }}</span>
           </div>
-        </div>
-        <div v-else class="note-content">
-          {{ note.content || 'Нет текста заметки' }}
+          <div v-if="editingNote && editingNote.id === note.id" class="note-edit">
+            <textarea
+                v-model="editingNote.content"
+                class="note-edit-textarea"
+                placeholder="Введите текст заметки..."
+                ref="textarea"
+            ></textarea>
+            <div class="note-edit-actions">
+              <button @click="cancelEditing" class="note-edit-cancel">Отмена</button>
+              <button @click="saveNote" class="note-edit-save">Сохранить</button>
+            </div>
+          </div>
+          <div v-else class="note-content">
+            {{ note.content || 'Нет текста заметки' }}
+          </div>
         </div>
       </div>
     </div>
@@ -72,16 +70,27 @@ export default {
   data() {
     return {
       editingNote: null,
-      localActiveNoteId: null,
       highlightTimeout: null
     }
   },
   computed: {
-    ...mapGetters(['getNotes', 'selectedDay', 'activeNoteId']),
-    formattedDate() {
-      if (!this.selectedDay) return ''
-      const days = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота']
-      const date = this.selectedDay.originalDate
+    ...mapGetters(['getNotes', 'activeNoteId']),
+    notes() {
+      return this.getNotes
+    },
+    sortedNotes() {
+      return [...this.notes].sort((a, b) => {
+        const dateA = new Date(a.date)
+        const dateB = new Date(b.date)
+        return dateB - dateA || a.time.localeCompare(b.time)
+      })
+    }
+  },
+  methods: {
+    ...mapActions(['updateNote', 'deleteNote']),
+    formatDate(dateString) {
+      const date = new Date(dateString)
+      const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
       const dayName = days[date.getDay()]
       const formattedDate = date.toLocaleDateString('ru-RU', {
         day: 'numeric',
@@ -90,32 +99,10 @@ export default {
       })
       return `${dayName}, ${formattedDate}`
     },
-    filteredNotes() {
-      if (!this.selectedDay) return this.getNotes
-      const selectedDate = this.selectedDay.originalDate.toISOString().split('T')[0]
-      return this.getNotes
-          .filter(note => note.date === selectedDate)
-          .sort((a, b) => new Date(b.date + 'T' + b.time.replace('<br>', ' ')) - new Date(a.date + 'T' + a.time.replace('<br>', ' ')))
-    },
-    activeNoteId() {
-      return this.$store.getters.activeNoteId || this.localActiveNoteId
-    }
-  },
-  methods: {
-    ...mapActions(['updateNote', 'deleteNote']),
-    hasNoteForLesson(note) {
-      return this.filteredNotes.some(n =>
-          n.lesson === note.lesson &&
-          n.time === note.time &&
-          n.id !== note.id
-      )
-    },
     startEditing(note) {
-      if (this.hasNoteForLesson(note)) {
-        return
-      }
       this.editingNote = { ...note }
       this.$nextTick(() => {
+        // Находим textarea в текущем редактируемом элементе
         const textarea = this.$el.querySelector(`[data-note-id="${note.id}"] textarea`)
         if (textarea) {
           textarea.focus()
@@ -148,23 +135,34 @@ export default {
 @import "@/assets/styles/variables.sass"
 
 .notes
+  display: flex
+  flex-direction: column
+  height: calc(100vh - #{$header-height} - #{$footer-height} - 2rem)
+  background: $color-white
+  overflow: hidden
   &__title
     font-size: 1.5rem
     font-weight: 500
     margin-bottom: 1.5rem
     color: $color-text
-
-.notes-date
-  font-size: 1.1rem
-  color: $color-text
-  margin-bottom: 1.5rem
-  padding: 0.5rem 0
-  border-bottom: 1px solid $color-table-border
+    flex-shrink: 0
 
 .notes-list
   display: flex
   flex-direction: column
   gap: 1.5rem
+  flex: 1
+  overflow-y: auto
+  padding-right: 0.5rem // Для отступа под скролл
+  // Стили для скроллбара (опционально)
+  &::-webkit-scrollbar
+    width: .6rem
+  &::-webkit-scrollbar-track
+    background: rgba(0, 0, 0, 0.05)
+    border-radius: 3px
+  &::-webkit-scrollbar-thumb
+    background: $color-light-green
+    border-radius: 3px
 
 .note-item
   background: white
@@ -177,8 +175,6 @@ export default {
     border-left: .4rem solid $color-light-green
     background-color: rgba($color-light-green, 0.05)
     animation: pulse-highlight 3s ease-out forwards
-  &:not(.note-item--active)
-    transition: all .5s ease
 
 @keyframes pulse-highlight
   0%
@@ -195,13 +191,41 @@ export default {
   display: flex
   justify-content: space-between
   align-items: center
-  margin-bottom: 0.5rem
+  margin-bottom: 0.8rem
+
+.note-meta
+  display: flex
+  flex-direction: column
+  gap: 0.3rem
+  font-size: 0.85rem
+  color: lighten($color-text, 20%)
+
+.note-date
+  font-weight: 500
+
+.note-time
+  color: $color-light-green
+
+.note-content-wrapper
+  display: flex
+  flex-direction: column
+  gap: 0.5rem
 
 .note-lesson
   font-size: 1.1rem
   font-weight: 500
   color: $color-text
   margin: 0
+
+.note-details
+  display: flex
+  gap: 1rem
+  font-size: 0.9rem
+  color: lighten($color-text, 20%)
+
+.note-room::before
+  content: "•"
+  margin-right: 0.5rem
 
 .note-actions
   display: flex
@@ -220,28 +244,6 @@ export default {
   transition: background 0.2s ease
   &:hover
     background: rgba(0, 0, 0, 0.05)
-  &:disabled
-    opacity: 0.5
-    cursor: not-allowed
-    svg path
-      stroke: #ccc
-
-.note-time
-  color: $color-light-green
-  font-size: 0.9rem
-  margin-bottom: 0.3rem
-
-.note-meta
-  display: flex
-  gap: 1rem
-  font-size: 0.9rem
-  color: lighten($color-text, 20%)
-  margin-bottom: 0.8rem
-
-.note-room
-  &::before
-    content: "•"
-    margin-right: 0.5rem
 
 .note-content
   color: $color-text
@@ -255,7 +257,8 @@ export default {
 
 .note-edit-textarea
   width: 100%
-  min-height: 100px
+  min-height: 5rem
+  max-height: 15rem
   padding: 0.8rem
   border: 1px solid $color-table-border
   border-radius: 0.3rem

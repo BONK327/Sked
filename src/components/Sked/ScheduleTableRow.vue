@@ -1,5 +1,12 @@
 <template>
-  <tr class="table__content-row">
+  <tr
+      class="table__content-row"
+      @dblclick="handleCellInteraction"
+      @mousedown="startLongPress"
+      @mouseup="endLongPress"
+      @touchstart="startLongPress"
+      @touchend="endLongPress"
+  >
     <td class="table__content-row-time" v-html="row.time"></td>
     <td :class="['table__content-row-color', `table__content-row-color--${row.type}`]"></td>
     <td class="table__content-row-lesson">
@@ -11,7 +18,7 @@
       <div class="table__content-row-room-note-container">
         <svg
             v-if="hasNote"
-            @click="handleNoteClick"
+            @click.stop="handleNoteClick"
             class="table__content-row-room-note"
             width="18"
             height="18"
@@ -41,10 +48,16 @@ export default {
       required: true
     }
   },
+  data() {
+    return {
+      longPressTimer: null
+    }
+  },
   computed: {
+    ...mapGetters(['selectedDay', 'getNotes']),
     hasNote() {
-      const selectedDate = this.$store.getters.selectedDay?.originalDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
-      return this.$store.getters.getNotes.some(note =>
+      const selectedDate = this.selectedDay?.originalDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
+      return this.getNotes.some(note =>
           note.lesson === this.row.lesson &&
           note.time === this.row.time &&
           note.date === selectedDate
@@ -52,32 +65,49 @@ export default {
     }
   },
   methods: {
-    ...mapActions(['addNote', 'setActiveTab', 'setActiveNote']),
-    handleNoteClick() {
-      const selectedDate = this.$store.getters.selectedDay?.originalDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
+    ...mapActions(['addNote', 'openNoteDialog']),
+    handleCellInteraction() {
+      const selectedDate = this.selectedDay?.originalDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
+      let note = this.getNotes.find(note =>
+          note.lesson === this.row.lesson &&
+          note.time === this.row.time &&
+          note.date === selectedDate
+      )
 
-      if (this.hasNote) {
-        const note = this.$store.getters.getNotes.find(note =>
-            note.lesson === this.row.lesson &&
-            note.time === this.row.time &&
-            note.date === selectedDate
-        )
-
-        if (note) {
-          this.setActiveTab('notes')
-          setTimeout(() => {
-            this.setActiveNote(note.id)
-          }, 100)
-        }
-      } else {
-        const newNote = {
+      if (!note) {
+        note = {
           id: Date.now(),
           lesson: this.row.lesson,
           time: this.row.time,
           content: '',
-          date: selectedDate
+          date: selectedDate,
+          teacher: this.row.teacher,
+          room: this.row.room
         }
-        this.addNote(newNote)
+        this.addNote(note)
+      }
+
+      this.openNoteDialog(note.id)
+    },
+    startLongPress(e) {
+      e.preventDefault()
+      this.longPressTimer = setTimeout(() => {
+        this.handleCellInteraction()
+      }, 500)
+    },
+    endLongPress() {
+      clearTimeout(this.longPressTimer)
+    },
+    handleNoteClick() {
+      const selectedDate = this.selectedDay?.originalDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
+      const note = this.getNotes.find(note =>
+          note.lesson === this.row.lesson &&
+          note.time === this.row.time &&
+          note.date === selectedDate
+      )
+
+      if (note) {
+        this.openNoteDialog(note.id)
       }
     }
   }
@@ -164,6 +194,7 @@ export default {
             align-items: center
             height: 100%
             padding-top: 0.3rem
+            pointer-events: auto
 
     tr
       min-height: 5rem
