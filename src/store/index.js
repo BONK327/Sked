@@ -7,7 +7,12 @@ export default createStore({
         selectedDay: null,
         isAddNoteModalOpen: false,
         availableLessons: [],
-        activeNoteId: null
+        activeNoteId: null,
+        // Добавляем состояние для диалога заметки
+        noteDialog: {
+            isOpen: false,
+            noteId: null
+        }
     },
     mutations: {
         ADD_NOTE(state, note) {
@@ -39,6 +44,15 @@ export default createStore({
         },
         SET_ACTIVE_NOTE(state, noteId) {
             state.activeNoteId = noteId
+        },
+        // Добавляем новые мутации для управления диалогом
+        OPEN_NOTE_DIALOG(state, payload) {
+            state.noteDialog.isOpen = true
+            state.noteDialog.noteId = payload.noteId
+        },
+        CLOSE_NOTE_DIALOG(state) {
+            state.noteDialog.isOpen = false
+            state.noteDialog.noteId = null
         }
     },
     actions: {
@@ -75,6 +89,13 @@ export default createStore({
         },
         updateAvailableLessons({ commit }, lessons) {
             commit('SET_AVAILABLE_LESSONS', lessons)
+        },
+        // Добавляем новые действия для диалога
+        openNoteDialog({ commit }, noteId) {
+            commit('OPEN_NOTE_DIALOG', { noteId })
+        },
+        closeNoteDialog({ commit }) {
+            commit('CLOSE_NOTE_DIALOG')
         }
     },
     getters: {
@@ -83,6 +104,10 @@ export default createStore({
         selectedDay: state => state.selectedDay,
         isAddNoteModalOpen: state => state.isAddNoteModalOpen,
         availableLessons: state => state.availableLessons.filter(lesson => lesson.lesson),
-        activeNoteId: state => state.activeNoteId
+        activeNoteId: state => state.activeNoteId,
+        // Добавляем геттер для диалога
+        noteDialog: state => state.noteDialog,
+        // И геттер для получения заметки по ID
+        getNoteById: state => id => state.notes.find(note => note.id === id)
     }
 })

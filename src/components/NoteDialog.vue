@@ -3,11 +3,11 @@
     <div class="note-dialog">
       <h3 class="dialog-title">Редактирование заметки</h3>
       <div class="dialog-meta">
-        <span class="dialog-lesson">{{ editingNote.lesson }}</span>
-        <span class="dialog-time">{{ editingNote.time }}</span>
+        <span class="dialog-lesson">{{ currentNote.lesson }}</span>
+        <span class="dialog-time">{{ currentNote.time }}</span>
       </div>
       <textarea
-          v-model="editingNote.content"
+          v-model="currentNote.content"
           class="dialog-textarea"
           placeholder="Введите текст заметки..."
           ref="textarea"
@@ -31,7 +31,7 @@
 </template>
 
 <script>
-import { mapState, mapActions, mapGetters } from 'vuex'
+import { mapGetters, mapActions } from 'vuex'
 
 export default {
   name: 'NoteDialog',
@@ -43,32 +43,30 @@ export default {
         time: '',
         content: '',
         date: ''
-      },
-      editingNote: null // Добавлено для хранения редактируемой копии
+      }
     }
   },
   computed: {
-    ...mapState(['noteDialog']),
-    ...mapGetters(['getNoteById']),
+    ...mapGetters(['noteDialog', 'getNoteById']),
     currentNote() {
       const note = this.getNoteById(this.noteDialog.noteId)
-      return note ? note : this.localNote
+      return note || this.localNote
     }
   },
   methods: {
-    ...mapActions({
-      updateNoteAction: 'updateNote',
-      deleteNoteAction: 'deleteNote',
-      closeNoteDialogAction: 'closeNoteDialog',
-      setActiveTabAction: 'setActiveTab',
-      setActiveNoteAction: 'setActiveNote'
-    }),
+    ...mapActions([
+      'updateNote',
+      'deleteNote',
+      'closeNoteDialog',
+      'setActiveTab',
+      'setActiveNote'
+    ]),
     saveNote() {
-      this.updateNoteAction(this.editingNote) // Сохраняем editingNote
+      this.updateNote(this.currentNote)
       this.closeDialog()
     },
     closeDialog() {
-      this.closeNoteDialogAction()
+      this.closeNoteDialog()
     },
     focusTextarea() {
       this.$nextTick(() => {
@@ -76,24 +74,19 @@ export default {
       })
     },
     navigateToNote() {
-      this.setActiveTabAction('notes')
-      this.setActiveNoteAction(this.currentNote.id)
+      this.setActiveTab('notes')
+      this.setActiveNote(this.currentNote.id)
       this.closeDialog()
     },
     deleteNote() {
-      this.deleteNoteAction(this.currentNote.id)
+      this.deleteNote(this.currentNote.id)
       this.closeDialog()
     }
   },
   watch: {
     'noteDialog.isOpen'(newVal) {
       if (newVal) {
-        // При открытии диалога создаем копию для редактирования
-        this.editingNote = {...this.currentNote}
         this.focusTextarea()
-      } else {
-        // При закрытии сбрасываем редактируемую копию
-        this.editingNote = null
       }
     }
   }
@@ -101,6 +94,7 @@ export default {
 </script>
 
 <style lang="sass" scoped>
+/* Стили остаются без изменений */
 @import "@/assets/styles/variables.sass"
 @import "@/assets/styles/mixins.sass"
 
