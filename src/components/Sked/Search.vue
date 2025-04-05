@@ -15,7 +15,7 @@ export default {
 </script>
 
 <style lang="sass" scoped>
-@import "@/assets/styles/variables"
+@import "@/assets/styles/variables.sass"
 
 .search
   display: flex
@@ -29,7 +29,7 @@ export default {
     border: solid 0.1rem $color-light-grey
     border-radius: 0.3rem
     width: 100%
-    height: 3rem
+    height: max-content
     margin-right: 1rem
 
     &::placeholder
@@ -37,6 +37,7 @@ export default {
       line-height: 1.2rem
       font-weight: 400
       color: $color-table-border
+
 
   &__loupe
     position: relative

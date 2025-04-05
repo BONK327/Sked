@@ -19,6 +19,7 @@
         <svg
             v-if="hasNote"
             @click.stop="handleNoteClick"
+            @touchstart.stop="handleNoteClick"
             class="table__content-row-room-note"
             width="18"
             height="18"
@@ -98,7 +99,11 @@ export default {
     endLongPress() {
       clearTimeout(this.longPressTimer)
     },
-    handleNoteClick() {
+    handleNoteClick(e) {
+      // Предотвращаем возможное срабатывание других обработчиков
+      e.preventDefault()
+      e.stopPropagation()
+
       const selectedDate = this.selectedDay?.originalDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
       const note = this.getNotes.find(note =>
           note.lesson === this.row.lesson &&
@@ -183,9 +188,11 @@ export default {
         &--num
           letter-spacing: -0.03rem
         &-note
-          margin-top: 0.3rem
+          width: 2.5rem
           cursor: pointer
           transition: transform .2s ease
+          touch-action: manipulation  // Оптимизация для касаний
+          -webkit-tap-highlight-color: transparent  // Убираем подсветку при касании на iOS
           &:hover
             transform: scale(1.1)
           &-container
@@ -194,7 +201,8 @@ export default {
             align-items: center
             height: 100%
             padding-top: 0.3rem
-            pointer-events: auto
+            z-index: 1
+            //pointer-events: auto
 
     tr
       min-height: 5rem

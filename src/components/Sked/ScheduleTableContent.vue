@@ -7,6 +7,7 @@
 </template>
 
 <script>
+import { mapActions } from 'vuex'
 import ScheduleTableRow from './ScheduleTableRow.vue'
 
 const defaultRows = [
@@ -72,7 +73,7 @@ export default {
   },
   computed: {
     normalizedRows() {
-      return defaultRows.map(defaultRow => {
+      const normalized = defaultRows.map(defaultRow => {
         const dataRow = this.rows.find(r => r.time === defaultRow.time) || {}
         return {
           ...defaultRow,
@@ -82,13 +83,27 @@ export default {
           room: dataRow.room || ''
         }
       })
+
+      // Сохраняем данные в хранилище для текущего дня
+      const dayIndex = this.$store.getters.selectedDayIndex
+      if (dayIndex !== null) {
+        this.updateFullWeekSchedule({
+          dayIndex,
+          schedule: normalized.filter(row => row.lesson)
+        })
+      }
+
+      return normalized
     }
+  },
+  methods: {
+    ...mapActions(['updateAvailableLessons', 'updateFullWeekSchedule'])
   },
   watch: {
     normalizedRows: {
       immediate: true,
       handler(rows) {
-        this.$store.dispatch('updateAvailableLessons', rows)
+        this.updateAvailableLessons(rows)
       }
     }
   }

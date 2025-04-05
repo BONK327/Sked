@@ -76,7 +76,11 @@ export default {
   computed: {
     ...mapGetters(['getNotes', 'activeNoteId']),
     notes() {
-      return this.getNotes
+      // Форматируем время для всех заметок
+      return this.getNotes.map(note => ({
+        ...note,
+        time: note.time.replace('<br>', ' - ')
+      }))
     },
     sortedNotes() {
       return [...this.notes].sort((a, b) => {
@@ -102,7 +106,6 @@ export default {
     startEditing(note) {
       this.editingNote = { ...note }
       this.$nextTick(() => {
-        // Находим textarea в текущем редактируемом элементе
         const textarea = this.$el.querySelector(`[data-note-id="${note.id}"] textarea`)
         if (textarea) {
           textarea.focus()
@@ -114,6 +117,11 @@ export default {
     },
     async saveNote() {
       if (this.editingNote) {
+        // Проверяем, содержит ли текст "Нет текста заметки"
+        if (this.editingNote.content && this.editingNote.content.trim() === 'Нет текста заметки') {
+          this.editingNote.content = 'Ну и зачем ты это пишешь ;(|'
+        }
+
         await this.updateNote(this.editingNote)
         this.editingNote = null
       }
@@ -159,10 +167,10 @@ export default {
     width: .6rem
   &::-webkit-scrollbar-track
     background: rgba(0, 0, 0, 0.05)
-    border-radius: 3px
+    border-radius: .3rem
   &::-webkit-scrollbar-thumb
     background: $color-light-green
-    border-radius: 3px
+    border-radius: .3rem
 
 .note-item
   background: white
@@ -201,10 +209,13 @@ export default {
   color: lighten($color-text, 20%)
 
 .note-date
-  font-weight: 500
+  font-weight: 600
+  font-size: 1.2rem
 
 .note-time
   color: $color-light-green
+  font-size: 1.2rem
+  font-weight: 600
 
 .note-content-wrapper
   display: flex
@@ -212,7 +223,7 @@ export default {
   gap: 0.5rem
 
 .note-lesson
-  font-size: 1.1rem
+  font-size: 1.2rem
   font-weight: 500
   color: $color-text
   margin: 0
@@ -223,9 +234,15 @@ export default {
   font-size: 0.9rem
   color: lighten($color-text, 20%)
 
-.note-room::before
-  content: "•"
-  margin-right: 0.5rem
+.note-teacher
+  font-size: 1rem
+  color: $color-light-green
+
+.note-room
+  font-size: 1rem
+  &::before
+    content: "•"
+    margin-right: 0.5rem
 
 .note-actions
   display: flex
@@ -250,7 +267,8 @@ export default {
   white-space: pre-line
   line-height: 1.5
   padding-top: 0.5rem
-  border-top: 1px solid $color-table-border
+  border-top: .1rem solid $color-table-border
+  font-size: 1.2rem
 
 .note-edit
   margin-top: 1rem
@@ -260,15 +278,14 @@ export default {
   min-height: 5rem
   max-height: 15rem
   padding: 0.8rem
-  border: 1px solid $color-table-border
+  border: .1rem solid $color-table-border
   border-radius: 0.3rem
   font-family: inherit
-  font-size: 0.95rem
+  font-size: 1.2rem
   resize: vertical
   &:focus
     outline: none
     border-color: $color-light-green
-    box-shadow: 0 0 0 2px rgba($color-light-green, 0.2)
 
 .note-edit-actions
   display: flex

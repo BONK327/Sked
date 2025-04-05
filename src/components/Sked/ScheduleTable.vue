@@ -1,35 +1,106 @@
 <template>
-  <section class="table">
+  <section
+      class="table"
+      @touchstart="handleTouchStart"
+      @touchmove="handleTouchMove"
+      @touchend="handleTouchEnd"
+      @mousedown="handleMouseDown"
+      @mouseup="handleMouseUp"
+      @mouseleave="handleMouseLeave"
+  >
     <h2 class="table__title">{{ formattedDate }}</h2>
     <ScheduleTableContent />
   </section>
 </template>
 
 <script>
-import { mapGetters } from 'vuex'
-import ScheduleTableContent from "@/components/Sked/ScheduleTableContent.vue";
+import { mapGetters, mapActions } from 'vuex'
+import ScheduleTableContent from "@/components/Sked/ScheduleTableContent.vue"
 
 export default {
   name: 'ScheduleTable',
   components: {
     ScheduleTableContent
   },
+  data() {
+    return {
+      touchStartX: null,
+      touchStartY: null,
+      mouseStartX: null,
+      isSwiping: false,
+      swipeThreshold: 50
+    }
+  },
   computed: {
-    ...mapGetters(['selectedDay']),
+    ...mapGetters(['selectedDay', 'days']),
     formattedDate() {
       if (this.selectedDay) {
-        return `${this.selectedDay.fullDayName} | ${this.selectedDay.date} ${this.selectedDay.month}`;
+        return `${this.selectedDay.fullDayName} | ${this.selectedDay.date} ${this.selectedDay.month}`
+      }
+      return ''
+    }
+  },
+  methods: {
+    ...mapActions(['navigateDay']),
+
+    handleTouchStart(e) {
+      this.touchStartX = e.touches[0].clientX
+      this.touchStartY = e.touches[0].clientY
+      this.isSwiping = false
+    },
+
+    handleTouchMove(e) {
+      if (!this.touchStartX) return
+
+      const deltaX = e.touches[0].clientX - this.touchStartX
+      const deltaY = e.touches[0].clientY - this.touchStartY
+
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        e.preventDefault()
+        this.isSwiping = true
+      }
+    },
+
+    handleTouchEnd(e) {
+      if (!this.touchStartX || !this.isSwiping) return
+
+      const deltaX = e.changedTouches[0].clientX - this.touchStartX
+      if (Math.abs(deltaX) > this.swipeThreshold) {
+        this.navigateDay(deltaX > 0 ? -1 : 1)
       }
 
-      // Дефолтные значения при первой загрузке
-      const today = new Date();
-      const dayNames = ['Воскресенье', 'Понедельник', 'Вторник',
-        'Среда', 'Четверг', 'Пятница', 'Суббота'];
-      const monthNames = ['января', 'февраля', 'марта', 'апреля',
-        'мая', 'июня', 'июля', 'августа',
-        'сентября', 'октября', 'ноября', 'декабря'];
+      this.resetTouch()
+    },
 
-      return `${dayNames[today.getDay()]} | ${today.getDate()} ${monthNames[today.getMonth()]}`;
+    handleMouseDown(e) {
+      this.mouseStartX = e.clientX
+      this.isSwiping = false
+    },
+
+    handleMouseUp(e) {
+      if (!this.mouseStartX || !this.isSwiping) return
+
+      const deltaX = e.clientX - this.mouseStartX
+      if (Math.abs(deltaX) > this.swipeThreshold) {
+        this.navigateDay(deltaX > 0 ? -1 : 1)
+      }
+
+      this.resetMouse()
+    },
+
+    handleMouseLeave() {
+      this.resetMouse()
+    },
+
+    resetTouch() {
+      this.touchStartX = null
+      this.touchStartY = null
+      this.isSwiping = false
+    },
+
+    resetMouse() {
+      this.mouseStartX = null
+      this.isSwiping = false
     }
   }
 }
@@ -46,6 +117,9 @@ export default {
   margin-bottom: 1.5rem
   display: flex
   flex-direction: column
+  user-select: none
+  touch-action: pan-y // Разрешаем вертикальную прокрутку
+
   &__title
     font-size: 1.5rem
     font-weight: 400
@@ -103,5 +177,4 @@ export default {
     td
       font-size: 0.8rem
       font-weight: 400
-
 </style>

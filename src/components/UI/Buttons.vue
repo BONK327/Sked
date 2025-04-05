@@ -1,6 +1,6 @@
 <template>
   <section class="btns">
-    <button class="btn btn__sked" @click="$emit('show-full-schedule')">Полное расписание
+    <button class="btn btn__sked" @click="showFullSchedule">Полное расписание
       <span>
         <svg class="btn__full-sked" width="23" height="23" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
               <g clip-path="url(#clip0_135_258)">
@@ -21,16 +21,35 @@
             </svg>
       </span>
     </button>
+    <FullScheduleModal v-if="showModal" @close="showModal = false" />
   </section>
 </template>
 
 <script>
-import {mapActions} from "vuex";
+import { mapActions } from "vuex"
+import FullScheduleModal from "@/components/FullScheduleModal.vue"
 
 export default {
   name: 'Buttons',
+  components: {
+    FullScheduleModal
+  },
+  data() {
+    return {
+      showModal: false
+    }
+  },
   methods: {
-    ...mapActions(['openAddNoteModal'])
+    ...mapActions(['openAddNoteModal', 'fetchFullWeekSchedule']), // Добавляем действие
+    async showFullSchedule() {
+      try {
+        // Загружаем данные перед открытием модального окна
+        await this.fetchFullWeekSchedule()
+        this.showModal = true
+      } catch (error) {
+        console.error('Ошибка загрузки расписания:', error)
+      }
+    }
   }
 }
 </script>
