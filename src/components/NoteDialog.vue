@@ -153,7 +153,7 @@ export default {
   border: .1rem solid $color-table-border
   border-radius: 0.3rem
   font-family: inherit
-  font-size: 1.5rem
+  font-size: 1.2rem
   margin-bottom: 1.5rem
   &:focus
     outline: none

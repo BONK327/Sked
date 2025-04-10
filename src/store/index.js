@@ -49,7 +49,8 @@ export default createStore({
             state.activeTab = tab
         },
         SET_SELECTED_DAY(state, day) {
-            state.selectedDay = day
+            state.selectedDay = day;
+            state.selectedDayIndex = day.dayIndex; // Сохраняем индекс выбранного дня
         },
         SET_ADD_NOTE_MODAL(state, value) {
             state.isAddNoteModalOpen = value
@@ -194,18 +195,113 @@ export default createStore({
             commit('SET_FULL_WEEK_SCHEDULE', { dayIndex, schedule })
         },
         async fetchFullWeekSchedule({ commit }) {
-            // Временные мок-данные - замените на реальные
+            // Моковые данные для каждого дня недели
             const mockData = {
-                0: [{ time: '08:00<br>09:30', type: 'lection', lesson: 'Математика', teacher: 'Иванов И.И.', room: '101' }],
-                1: [{ time: '09:45<br>11:15', type: 'seminar', lesson: 'Физика', teacher: 'Петров П.П.', room: '202' }],
-                // ... остальные дни
-            }
+                0: [ // Понедельник
+                    {
+                        time: '08:00<br>09:30',
+                        type: 'lection',
+                        lesson: 'Веб-дизайн и интернет-программирование',
+                        teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
+                        room: '635гл'
+                    },
+                    {
+                        time: '09:45<br>11:15',
+                        type: 'lection',
+                        lesson: 'Веб-дизайн и интернет-программирование',
+                        teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
+                        room: '635гл'
+                    },
+                    // ... остальные пары понедельника
+                ],
+                1: [ // Вторник
+                    {
+                        time: '09:45<br>11:15',
+                        type: 'lection',
+                        lesson: 'Веб-дизайн и интернет-программирование',
+                        teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
+                        room: '635гл'
+                    },
+                ],
+                // Заполнить данные для остальных дней
+                2: [ // Среда
+                    {
+                        time: '08:00<br>09:30',
+                        type: 'lection',
+                        lesson: 'Веб-дизайн и интернет-программирование',
+                        teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
+                        room: '635гл'
+                    },
+                ],
+                3: [ // Четверг
+                    {
+                        time: '09:45<br>11:15',
+                        type: 'lection',
+                        lesson: 'Веб-дизайн и интернет-программирование',
+                        teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
+                        room: '635гл'
+                    },
+                ],
+                4: [ // Пятница
+                    {
+                        time: '08:00<br>09:30',
+                        type: 'lection',
+                        lesson: 'Веб-дизайн и интернет-программирование',
+                        teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
+                        room: '635гл'
+                    },
+                ],
+                5: [ // Суббота
+                    {
+                        time: '08:00<br>09:30',
+                        type: 'lection',
+                        lesson: 'Веб-дизайн и интернет-программирование',
+                        teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
+                        room: '635гл'
+                    },
+                    {
+                        time: '09:45<br>11:15',
+                        type: 'lection',
+                        lesson: 'Веб-дизайн и интернет-программирование',
+                        teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
+                        room: '635гл'
+                    },
+                    {
+                        time: '11:30<br>13:00',
+                        type: 'lection',
+                        lesson: 'Веб-дизайн и интернет-программирование',
+                        teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
+                        room: '635гл'
+                    },
+                    {
+                        time: '13:15<br>14:45',
+                        type: 'lection',
+                        lesson: 'Веб-дизайн и интернет-программирование',
+                        teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
+                        room: '635гл'
+                    },
+                    {
+                        time: '15:00<br>16:30',
+                        lesson: 'Веб-дизайн и интернет-программирование',
+                        teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
+                        room: '635гл'
+                    },
+                    {
+                        time: '16:45<br>18:15',
+                        type: 'lection',
+                        lesson: 'Веб-дизайн и интернет-программирование',
+                        teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
+                        room: '635гл'
+                    }
+                ],
+
+            };
 
             for (let dayIndex = 0; dayIndex < 6; dayIndex++) {
                 commit('SET_FULL_WEEK_SCHEDULE', {
                     dayIndex,
                     schedule: mockData[dayIndex] || []
-                })
+                });
             }
         }
 

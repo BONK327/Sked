@@ -81,7 +81,8 @@ export default {
         fullDayName: this.fullDayNames[index],
         date: clickedDate.getDate(),
         month: this.monthNames[clickedDate.getMonth()],
-        originalDate: clickedDate
+        originalDate: clickedDate,
+        dayIndex: index // Добавляем индекс дня
       });
     },
 

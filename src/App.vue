@@ -41,7 +41,7 @@ export default {
     const dayNames = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
     const monthNames = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 
-    this.$store.dispatch('setSelectedDay', {
+    this.$store.dispatch('fetchFullWeekSchedule', {
       fullDayName: dayNames[today.getDay()],
       date: today.getDate(),
       month: monthNames[today.getMonth()],
@@ -88,6 +88,8 @@ body
   min-height: 100vh
   position: relative
   user-select: none
+  -webkit-tap-highlight-color: transparent
+  
 
 .schedule
   flex: 1
