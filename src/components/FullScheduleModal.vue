@@ -14,7 +14,11 @@
           <div v-for="(day, dayIndex) in weekDays" :key="dayIndex" class="table">
             <h3 class="table__title">{{ day.fullName }}</h3>
             <div class="table__content">
-              <div class="table__content-row" v-for="(row, rowIndex) in normalizedRows" :key="rowIndex">
+              <div
+                  v-for="(row, rowIndex) in getTimeSlotsForDay(dayIndex)"
+                  :key="rowIndex"
+                  class="table__content-row"
+              >
                 <div class="table__content-row-time" v-html="row.time"></div>
                 <div :class="['table__content-row-color', `table__content-row-color--${getTypeForLesson(dayIndex, row.time)}`]"></div>
                 <div class="table__content-row-lesson">
@@ -45,6 +49,15 @@ const defaultRows = [
   { time: '17:20<br>18:50', type: 'seminar' },
 ]
 
+const saturdayRows = [
+  { time: '08:00<br>09:30', type: 'seminar' },
+  { time: '09:45<br>11:15', type: 'seminar' },
+  { time: '11:30<br>13:00', type: 'seminar' },
+  { time: '13:15<br>14:45', type: 'seminar' },
+  { time: '15:00<br>16:30', type: 'seminar' },
+  { time: '16:45<br>18:15', type: 'seminar' },
+]
+
 export default {
   name: 'FullScheduleModal',
   data() {
@@ -57,7 +70,6 @@ export default {
         { shortName: 'Пт', fullName: 'Пятница' },
         { shortName: 'Сб', fullName: 'Суббота' }
       ],
-      normalizedRows: defaultRows,
       isLoading: false
     }
   },
@@ -70,10 +82,16 @@ export default {
     closeModal() {
       this.$emit('close')
     },
+
+    getTimeSlotsForDay(dayIndex) {
+      return dayIndex === 5 ? saturdayRows : defaultRows
+    },
+
     getLessonForDay(dayIndex, time) {
       const daySchedule = this.fullWeekSchedule[dayIndex] || []
       return daySchedule.find(lesson => lesson.time === time)
     },
+
     getTypeForLesson(dayIndex, time) {
       const lesson = this.getLessonForDay(dayIndex, time)
       return lesson?.type || 'seminar'

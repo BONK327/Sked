@@ -17,7 +17,7 @@
       <span class="table__content-row-room--num">{{ row.room }}</span>
       <div class="table__content-row-room-note-container">
         <svg
-            v-if="hasNote"
+            v-if="hasNote && isLessonExists"
             @click.stop="handleNoteClick"
             @touchstart.stop="handleNoteClick"
             class="table__content-row-room-note"
@@ -56,6 +56,9 @@ export default {
   },
   computed: {
     ...mapGetters(['selectedDay', 'getNotes']),
+    isLessonExists() {
+      return this.row.lesson.trim() !== ''
+    },
     hasNote() {
       const selectedDate = this.selectedDay?.originalDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
       return this.getNotes.some(note =>
@@ -68,6 +71,7 @@ export default {
   methods: {
     ...mapActions(['addNote', 'openNoteDialog']),
     handleCellInteraction() {
+      if (!this.isLessonExists) return
       const selectedDate = this.selectedDay?.originalDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
       let note = this.getNotes.find(note =>
           note.lesson === this.row.lesson &&
@@ -91,6 +95,7 @@ export default {
       this.openNoteDialog(note.id)
     },
     startLongPress(e) {
+      if (!this.isLessonExists) return // Блокируем если пары нет
       e.preventDefault()
       this.longPressTimer = setTimeout(() => {
         this.handleCellInteraction()
@@ -100,6 +105,11 @@ export default {
       clearTimeout(this.longPressTimer)
     },
     handleNoteClick(e) {
+      if (!this.isLessonExists) {
+        e.preventDefault()
+        e.stopPropagation()
+        return
+      }
       // Предотвращаем возможное срабатывание других обработчиков
       e.preventDefault()
       e.stopPropagation()
@@ -202,7 +212,7 @@ export default {
             height: 100%
             padding-top: 0.3rem
             z-index: 1
-            //pointer-events: auto
+    //pointer-events: auto
 
     tr
       min-height: 5rem

@@ -16,6 +16,7 @@ export default {
 
 <style lang="sass" scoped>
 @import "@/assets/styles/variables.sass"
+@import "@/assets/styles/mixins.sass"
 
 .search
   display: flex
@@ -31,12 +32,20 @@ export default {
     width: 100%
     height: max-content
     margin-right: 1rem
+    @include respond(small-phone)
+      height: 3.5rem
+    @include respond(phone)
+      height: 3.5rem
 
     &::placeholder
-      font-size: 1rem
-      line-height: 1.2rem
+      font-size: 1.3rem
+      line-height: 1.5rem
       font-weight: 400
       color: $color-table-border
+      @include respond(small-phone)
+        font-size: 1.3rem
+      @include respond(phone)
+        font-size: 1.4rem
 
 
   &__loupe
@@ -50,6 +59,12 @@ export default {
     align-items: center
     justify-content: center
     cursor: pointer
+    @include respond(small-phone)
+      height: 3.2rem
+      width: 3.2rem
+    @include respond(phone)
+      height: 3.4rem
+      width: 3.4rem
 
     // Hover-эффекты только для устройств с мышью
     @media (hover: hover) and (pointer: fine)

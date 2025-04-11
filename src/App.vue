@@ -63,15 +63,15 @@ export default {
 html
   height: 100%
   @include respond(big-screen)
-    font-size: 80%
+    font-size: 84%
   @include respond(computer)
-    font-size: 80%
+    font-size: 82%
   @include respond(tab-lend)
-    font-size: 75%
+    font-size: 80%
   @include respond(tab-port)
-    font-size: 70%
+    font-size: 77%
   @include respond(phone)
-    font-size: 67.5%
+    font-size: 72.5%
   @include respond(small-phone)
     font-size: 62.5%
   background-color: #212529

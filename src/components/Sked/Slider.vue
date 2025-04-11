@@ -153,7 +153,8 @@ export default {
 </script>
 
 <style lang="sass" scoped>
-@import "@/assets/styles/variables"
+@import "@/assets/styles/variables.sass"
+@import "@/assets/styles/mixins.sass"
 
 .slider
   display: flex
@@ -173,6 +174,12 @@ export default {
     min-width: 1.2rem
     min-height: 1.2rem
     transition: transform 0.2s
+    @include respond(small-phone)
+      min-height: 1rem
+      min-width: 1rem
+    @include respond(phone)
+      min-height: 1.2rem
+      min-width: 1.2rem
 
     // Hover-эффекты только для устройств с мышью
     @media (hover: hover) and (pointer: fine)
@@ -195,6 +202,12 @@ export default {
     min-width: 3rem
     position: relative
     transition: all .3s ease
+    @include respond(small-phone)
+      padding: .5rem
+      min-width: 2.5rem
+    @include respond(phone)
+      padding: .6rem
+      min-width: 3rem
 
     // Hover-эффекты только для устройств с мышью
     @media (hover: hover) and (pointer: fine)
@@ -214,6 +227,10 @@ export default {
       line-height: 0.9rem
       display: block
       width: 100%
+      @include respond(small-phone)
+        font-size: 1rem
+      @include respond(phone)
+        font-size: 1rem
 
     &-week
       font-size: 1.6rem

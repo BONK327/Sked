@@ -108,6 +108,7 @@ export default {
 
 <style lang="sass" scoped>
 @import "@/assets/styles/variables.sass"
+@import "@/assets/styles/mixins.sass"
 .table
   width: 100%
   min-height: 100%
@@ -173,8 +174,18 @@ export default {
       background-color: white
       border: solid 0.1rem $color-table-border
       margin-top: -0.1rem
+      @include respond(small-phone)
+        height: 6rem
+        border: solid 0.15rem $color-table-border
+      @include respond(phone)
+        height: 6rem
+        border: solid 0.15rem $color-table-border
     th,
     td
       font-size: 0.8rem
       font-weight: 400
+      @include respond(small-phone)
+        font-size: 1.2rem
+      @include respond(phone)
+        font-size: 1.2rem
 </style>
