@@ -10,7 +10,8 @@
         </button>
       </div>
       <div class="modal-body">
-        <div class="week-schedule">
+        <div v-if="isLoading" class="loading">Загрузка...</div>
+        <div v-else class="week-schedule">
           <div v-for="(day, dayIndex) in weekDays" :key="dayIndex" class="table">
             <h3 class="table__title">{{ day.fullName }}</h3>
             <div class="table__content">
@@ -74,7 +75,7 @@ export default {
     }
   },
   computed: {
-    ...mapGetters(['fullWeekSchedule'])
+    ...mapGetters(['currentWeekSchedule']),
   },
   methods: {
     ...mapActions(['fetchFullWeekSchedule']),
@@ -88,13 +89,13 @@ export default {
     },
 
     getLessonForDay(dayIndex, time) {
-      const daySchedule = this.fullWeekSchedule[dayIndex] || []
-      return daySchedule.find(lesson => lesson.time === time)
+      if (!this.currentWeekSchedule || !this.currentWeekSchedule[dayIndex]) return null;
+      return this.currentWeekSchedule[dayIndex].find(lesson => lesson.time === time);
     },
 
     getTypeForLesson(dayIndex, time) {
-      const lesson = this.getLessonForDay(dayIndex, time)
-      return lesson?.type || 'seminar'
+      const lesson = this.getLessonForDay(dayIndex, time);
+      return lesson?.type || 'seminar';
     }
   },
   async created() {

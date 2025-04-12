@@ -49,5 +49,4 @@ export default {
       font-size: 2.6rem
     &__week
       font-size: 1.8rem
-
 </style>

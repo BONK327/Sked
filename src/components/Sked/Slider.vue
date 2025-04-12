@@ -77,12 +77,15 @@ export default {
       this.selectedDate = clickedDate;
       this.updateDays();
 
+      // Обновляем тип недели только при клике на день
+      this.updateWeekType();
+
       this.setSelectedDay({
         fullDayName: this.fullDayNames[index],
         date: clickedDate.getDate(),
         month: this.monthNames[clickedDate.getMonth()],
         originalDate: clickedDate,
-        dayIndex: index // Добавляем индекс дня
+        dayIndex: index
       });
     },
 
@@ -144,6 +147,10 @@ export default {
         this.weekOffset++;
         this.updateDays();
       }
+    },
+    updateWeekType() {
+      const weekType = this.$store.getters.getWeekTypeByOffset(this.weekOffset);
+      this.$store.dispatch('setCurrentWeekType', weekType);
     }
   },
   mounted() {

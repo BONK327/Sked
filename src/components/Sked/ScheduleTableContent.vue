@@ -82,7 +82,7 @@ export default {
   computed: {
     currentDaySchedule() {
       const dayIndex = this.$store.getters.selectedDayIndex;
-      return this.$store.getters.fullWeekSchedule[dayIndex] || [];
+      return this.$store.getters.currentWeekSchedule[dayIndex] || [];
     },
     timeSlots() {
       const dayIndex = this.$store.getters.selectedDayIndex;
