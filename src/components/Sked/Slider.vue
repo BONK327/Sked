@@ -1,5 +1,6 @@
 <template>
   <section class="slider">
+    <!-- Стрелки -->
     <svg
         class="slider__left"
         :class="{ 'slider__arrow-disabled': weekOffset <= -2 }"
@@ -51,33 +52,46 @@
 </template>
 
 <script>
-import { mapActions } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 export default {
   name: 'Slider',
   data() {
+    const today = new Date()
+    let weekOffset = 0
+
+    // Если сегодня воскресенье, стартуем со следующей недели
+    if(today.getDay() === 0) {
+      weekOffset = 1
+    }
+
     return {
-      weekOffset: 0,
+      weekOffset,
       weekDays: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
       fullDayNames: ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'],
       monthNames: ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'],
       days: [],
-      selectedDate: null // Будем хранить полную дату выбранного дня
-    };
+      selectedDate: null,
+      todayAdjusted: new Date()
+    }
+  },
+  computed: {
+    ...mapGetters(['selectedDayIndex', 'days', 'currentWeekType']),
+    currentDayIndex() {
+      const today = new Date()
+      if (today.getDay() === 0) return 0 // Если воскресенье, показываем понедельник
+      return today.getDay() - 1
+    }
   },
   methods: {
-    ...mapActions(['setSelectedDay']),
+    ...mapActions(['setSelectedDay', 'setCurrentWeekType']),
 
     handleDayClick(index) {
-      const clickedDate = new Date();
-      clickedDate.setDate(clickedDate.getDate() + this.weekOffset * 7);
-      const dayDiff = clickedDate.getDay() === 0 ? 6 : clickedDate.getDay() - 1;
-      clickedDate.setDate(clickedDate.getDate() - dayDiff + index);
-
+      const clickedDate = new Date(this.days[index].originalDate);
       this.selectedDate = clickedDate;
-      this.updateDays();
 
-      // Обновляем тип недели только при клике на день
+      // Обновляем дни, сохраняя выбранную дату
+      this.updateDays();
       this.updateWeekType();
 
       this.setSelectedDay({
@@ -89,11 +103,6 @@ export default {
       });
     },
 
-    getDayOfWeekName(date) {
-      const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-      return days[date.getDay()];
-    },
-
     isSameDay(date1, date2) {
       return date1.getDate() === date2.getDate() &&
           date1.getMonth() === date2.getMonth() &&
@@ -102,35 +111,59 @@ export default {
 
     updateDays() {
       const today = new Date();
-      const currentDate = today.getDate();
-      const currentMonth = today.getMonth();
-      const currentYear = today.getFullYear();
 
-      const weekStart = new Date(today);
-      weekStart.setDate(today.getDate() + this.weekOffset * 7);
+      // Если сегодня воскресенье, переключаем на понедельник следующей недели
+      if(today.getDay() === 0) {
+        this.todayAdjusted = new Date(today);
+        this.todayAdjusted.setDate(today.getDate() + 1);
+        // Устанавливаем смещение на следующую неделю, если еще не установлено
+        if(this.weekOffset === 0) this.weekOffset = 1;
+      } else {
+        this.todayAdjusted = new Date(today);
+      }
+
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() + this.weekOffset * 7);
       const dayDiff = weekStart.getDay() === 0 ? 6 : weekStart.getDay() - 1;
       weekStart.setDate(weekStart.getDate() - dayDiff);
 
-      this.days = this.weekDays.map((day, index) => {
+      const newDays = this.weekDays.map((day, index) => {
         const date = new Date(weekStart);
         date.setDate(weekStart.getDate() + index);
 
-        const isCurrentDay = this.isSameDay(date, today);
-        const isSelectedDay = this.selectedDate && this.isSameDay(date, this.selectedDate);
+        const isCurrentDay = this.isSameDay(date, this.todayAdjusted);
+        // Если есть выбранная дата, проверяем соответствие дня недели
+        const isSelectedDay = this.selectedDate
+            ? date.getDay() === this.selectedDate.getDay()
+            : isCurrentDay; // Если нет выбранной даты, активным будет текущий день
 
         return {
           date: date.getDate().toString().padStart(2, '0'),
           weekDay: day,
-          isActive: isSelectedDay,
-          isCurrentDay: isCurrentDay
+          fullDayName: this.fullDayNames[index],
+          month: this.monthNames[date.getMonth()],
+          originalDate: date,
+          isCurrentDay: isCurrentDay,
+          isActive: isSelectedDay
         };
       });
 
-      // Если это первая загрузка и ничего не выбрано, выбираем текущий день
-      if (!this.selectedDate && this.weekOffset === 0) {
-        const currentDayIndex = this.days.findIndex(day => day.isCurrentDay);
-        if (currentDayIndex !== -1) {
-          this.handleDayClick(currentDayIndex);
+      this.$store.commit('SET_DAYS', newDays);
+      this.days = newDays;
+
+      // Если это начальная загрузка, устанавливаем текущий день как выбранный
+      if (!this.selectedDate) {
+        const activeDay = newDays.find(day => day.isActive);
+        if (activeDay) {
+          this.selectedDate = activeDay.originalDate;
+          const index = newDays.findIndex(day => day.isActive);
+          this.setSelectedDay({
+            fullDayName: activeDay.fullDayName,
+            date: activeDay.date,
+            month: activeDay.month,
+            originalDate: activeDay.originalDate,
+            dayIndex: index
+          });
         }
       }
     },
@@ -138,25 +171,55 @@ export default {
     prevWeek() {
       if (this.weekOffset > -2) {
         this.weekOffset--;
+        // Сохраняем индекс выбранного дня перед обновлением
+        const selectedIndex = this.days.findIndex(day => day.isActive);
         this.updateDays();
+        // Восстанавливаем выбранный день после обновления
+        if (selectedIndex >= 0) {
+          this.handleDayClick(selectedIndex);
+        }
       }
     },
 
     nextWeek() {
       if (this.weekOffset < 2) {
         this.weekOffset++;
+        // Сохраняем индекс выбранного дня перед обновлением
+        const selectedIndex = this.days.findIndex(day => day.isActive);
         this.updateDays();
+        // Восстанавливаем выбранный день после обновления
+        if (selectedIndex >= 0) {
+          this.handleDayClick(selectedIndex);
+        }
       }
     },
+
     updateWeekType() {
-      const weekType = this.$store.getters.getWeekTypeByOffset(this.weekOffset);
-      this.$store.dispatch('setCurrentWeekType', weekType);
+      const weekType = this.$store.getters.getWeekTypeByOffset(this.weekOffset)
+      this.$store.dispatch('setCurrentWeekType', weekType)
     }
   },
+  watch: {
+    selectedDayIndex(newIndex) {
+      if (newIndex !== undefined && this.days[newIndex]) {
+        const day = this.days[newIndex];
+        this.selectedDate = day.originalDate;
+
+        // Обновляем активные дни
+        this.days.forEach((d, i) => {
+          d.isActive = i === newIndex;
+        });
+      }
+    },
+  },
   mounted() {
-    this.updateDays();
+    const today = new Date()
+    if(today.getDay() === 0) {
+      this.weekOffset = 1
+    }
+    this.updateDays()
   }
-};
+}
 </script>
 
 <style lang="sass" scoped>
@@ -270,9 +333,9 @@ export default {
 
 .date-flip-enter-from
   opacity: 0
-  transform: translateY(-10px)
+  transform: translateY(-1rem)
 
 .date-flip-leave-to
   opacity: 0
-  transform: translateY(10px)
+  transform: translateY(1rem)
 </style>

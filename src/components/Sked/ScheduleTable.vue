@@ -1,107 +1,99 @@
 <template>
-  <section
-      class="table"
-      @touchstart="handleTouchStart"
-      @touchmove="handleTouchMove"
-      @touchend="handleTouchEnd"
-      @mousedown="handleMouseDown"
-      @mouseup="handleMouseUp"
-      @mouseleave="handleMouseLeave"
-  >
-    <h2 class="table__title">{{ formattedDate }}</h2>
-    <ScheduleTableContent />
+  <section>
+    <swiper
+        class="table-swiper"
+        :slides-per-view="1"
+        :space-between="50"
+        @swiper="onSwiper"
+        @slide-change="onSlideChange"
+        :initial-slide="initialSlide"
+        :key="swiperKey"
+    >
+      <swiper-slide v-for="(day, index) in days" :key="index">
+        <section class="table">
+          <h2 class="table__title">
+            {{ day?.fullDayName || '' }} | {{ day?.date || '' }} {{ day?.month || '' }}
+          </h2>
+          <ScheduleTableContent :day-index="index" />
+        </section>
+      </swiper-slide>
+    </swiper>
   </section>
 </template>
 
 <script>
+import { Swiper, SwiperSlide } from 'swiper/vue'
+import 'swiper/css'
 import { mapGetters, mapActions } from 'vuex'
 import ScheduleTableContent from "@/components/Sked/ScheduleTableContent.vue"
 
 export default {
   name: 'ScheduleTable',
   components: {
+    Swiper,
+    SwiperSlide,
     ScheduleTableContent
   },
   data() {
     return {
-      touchStartX: null,
-      touchStartY: null,
-      mouseStartX: null,
-      isSwiping: false,
-      swipeThreshold: 50
+      swiperInstance: null,
+      localSelectedDayIndex: 0 // Track the selected day index locally
     }
   },
   computed: {
-    ...mapGetters(['selectedDay', 'days']),
-    formattedDate() {
-      if (this.selectedDay) {
-        return `${this.selectedDay.fullDayName} | ${this.selectedDay.date} ${this.selectedDay.month}`
-      }
-      return ''
+    ...mapGetters(['days', 'selectedDayIndex', 'monthNames', 'currentWeekType']),
+    initialSlide() {
+      // Initialize with the stored selected day index
+      return this.localSelectedDayIndex;
+    },
+    swiperKey() {
+      // Include currentWeekType to force swiper recreation when week changes
+      return `${this.currentWeekType}`;
     }
   },
   methods: {
-    ...mapActions(['navigateDay']),
+    ...mapActions(['setSelectedDay']),
 
-    handleTouchStart(e) {
-      this.touchStartX = e.touches[0].clientX
-      this.touchStartY = e.touches[0].clientY
-      this.isSwiping = false
+    onSwiper(swiper) {
+      this.swiperInstance = swiper;
+      // Set initial slide based on localSelectedDayIndex
+      swiper.slideTo(this.localSelectedDayIndex);
     },
 
-    handleTouchMove(e) {
-      if (!this.touchStartX) return
-
-      const deltaX = e.touches[0].clientX - this.touchStartX
-      const deltaY = e.touches[0].clientY - this.touchStartY
-
-      if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        e.preventDefault()
-        this.isSwiping = true
+    onSlideChange(swiper) {
+      const dayIndex = swiper.activeIndex;
+      this.localSelectedDayIndex = dayIndex; // Update local index
+      if (this.days[dayIndex]) {
+        this.setSelectedDay({
+          ...this.days[dayIndex],
+          dayIndex: dayIndex
+        });
       }
     },
+  },
+  watch: {
+    // When days change (week switch), reset to the stored day index
+    days() {
+      this.$nextTick(() => {
+        if (this.swiperInstance && this.localSelectedDayIndex !== undefined) {
+          this.swiperInstance.slideTo(this.localSelectedDayIndex);
+        }
+      });
+    },
 
-    handleTouchEnd(e) {
-      if (!this.touchStartX || !this.isSwiping) return
-
-      const deltaX = e.changedTouches[0].clientX - this.touchStartX
-      if (Math.abs(deltaX) > this.swipeThreshold) {
-        this.navigateDay(deltaX > 0 ? -1 : 1)
+    // Handle external changes to selectedDayIndex
+    selectedDayIndex(newIndex) {
+      if (newIndex !== undefined && newIndex !== this.localSelectedDayIndex) {
+        this.localSelectedDayIndex = newIndex;
+        if (this.swiperInstance) {
+          this.swiperInstance.slideTo(newIndex);
+        }
       }
-
-      this.resetTouch()
-    },
-
-    handleMouseDown(e) {
-      this.mouseStartX = e.clientX
-      this.isSwiping = false
-    },
-
-    handleMouseUp(e) {
-      if (!this.mouseStartX || !this.isSwiping) return
-
-      const deltaX = e.clientX - this.mouseStartX
-      if (Math.abs(deltaX) > this.swipeThreshold) {
-        this.navigateDay(deltaX > 0 ? -1 : 1)
-      }
-
-      this.resetMouse()
-    },
-
-    handleMouseLeave() {
-      this.resetMouse()
-    },
-
-    resetTouch() {
-      this.touchStartX = null
-      this.touchStartY = null
-      this.isSwiping = false
-    },
-
-    resetMouse() {
-      this.mouseStartX = null
-      this.isSwiping = false
     }
+  },
+  created() {
+    // Initialize localSelectedDayIndex with the store value
+    this.localSelectedDayIndex = this.selectedDayIndex || 0;
   }
 }
 </script>
@@ -188,4 +180,13 @@ export default {
         font-size: 1.2rem
       @include respond(phone)
         font-size: 1.2rem
+
+.table-swiper
+  width: 100%
+  height: 100%
+
+
+.swiper-slide
+  height: 100%
+
 </style>

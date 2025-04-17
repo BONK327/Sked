@@ -8,7 +8,7 @@
         </div>
         <div class="modal-content">
           <div
-              v-for="lesson in availableLessons"
+              v-for="lesson in todaysLessons"
               :key="lesson.time"
               class="lesson-item"
               :class="{ 'lesson-item--has-note': hasNoteForLesson(lesson) }"
@@ -21,7 +21,7 @@
               Заметка уже добавлена
             </div>
           </div>
-          <p v-if="availableLessons.length === 0" class="no-lessons">
+          <p v-if="todaysLessons.length === 0" class="no-lessons">
             Нет доступных пар для добавления заметки
           </p>
         </div>
@@ -36,12 +36,16 @@ import { mapActions, mapGetters } from 'vuex'
 export default {
   name: 'AddNoteModal',
   computed: {
-    ...mapGetters(['isAddNoteModalOpen', 'availableLessons', 'getNotes', 'selectedDay']),
+    ...mapGetters(['isAddNoteModalOpen', 'availableLessons', 'getNotes', 'selectedDay', 'currentWeekSchedule', 'selectedDayIndex']),
     isOpen() {
       return this.isAddNoteModalOpen
     },
     selectedDate() {
       return this.selectedDay?.originalDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
+    },
+    todaysLessons() {
+      // Get lessons for the currently selected day
+      return this.currentWeekSchedule[this.selectedDayIndex] || []
     }
   },
   methods: {

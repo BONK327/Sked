@@ -18,8 +18,10 @@ import Buttons from "@/components/UI/Buttons.vue";
 
 export default {
   name: 'sked',
-  components: {Header, Buttons, ScheduleTable, Search, GroupInfo, Slider}
-
+  components: {Header, Buttons, ScheduleTable, Search, GroupInfo, Slider},
+  mounted() {
+    this.$store.dispatch('updateDays')
+  }
 }
 </script>
 

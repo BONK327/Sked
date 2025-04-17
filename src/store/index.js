@@ -5,6 +5,8 @@ export default createStore({
         notes: JSON.parse(localStorage.getItem('notes')) || [],
         activeTab: 'schedule',
         selectedDay: null,
+        selectedDayIndex: 0,
+        days: [],
         isAddNoteModalOpen: false,
         availableLessons: [],
         activeNoteId: null,
@@ -14,8 +16,7 @@ export default createStore({
             noteId: null
         },
         currentWeekOffset: 0,
-        selectedDayIndex: null,
-        days: [],
+
         weekDays: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
         fullDayNames: ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'],
         monthNames: ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'],
@@ -39,6 +40,7 @@ export default createStore({
             }
         }
 
+
     },
     mutations: {
         ADD_NOTE(state, note) {
@@ -61,7 +63,9 @@ export default createStore({
         },
         SET_SELECTED_DAY(state, day) {
             state.selectedDay = day;
-            state.selectedDayIndex = day.dayIndex; // Сохраняем индекс выбранного дня
+            if (day && day.dayIndex !== undefined) {
+                state.selectedDayIndex = day.dayIndex;
+            }
         },
         SET_ADD_NOTE_MODAL(state, value) {
             state.isAddNoteModalOpen = value
@@ -558,6 +562,9 @@ export default createStore({
         updateWeekSchedule({ commit }, { weekType, dayIndex, schedule }) {
             commit('SET_WEEK_SCHEDULE', { weekType, dayIndex, schedule });
         },
+        updateWeekOffset({ commit }, offset) {
+            commit('SET_WEEK_OFFSET', offset)
+        },
 
 
     },
@@ -572,7 +579,11 @@ export default createStore({
         noteDialog: state => state.noteDialog,
         // И геттер для получения заметки по ID
         getNoteById: state => id => state.notes.find(note => note.id === id),
-        days: state => state.days,
+        days: state => state.days.map((day, index) => ({
+            ...day,
+            fullDayName: state.fullDayNames[index], // Исправляем индекс
+            month: state.monthNames[new Date(day.originalDate).getMonth()]
+        })),
         currentWeekOffset: state => state.currentWeekOffset,
         selectedDayIndex: state => state.selectedDayIndex,
         canNavigatePrev: state => state.currentWeekOffset > -2,
@@ -584,6 +595,8 @@ export default createStore({
             const absoluteOffset = Math.abs(offset);
             return absoluteOffset % 2 === 0 ? 'week1' : 'week2';
         },
+        monthNames: state => state.monthNames,
         fullWeekSchedule: (state, getters) => getters.currentWeekSchedule
     }
 })
+

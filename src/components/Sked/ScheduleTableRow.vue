@@ -1,12 +1,5 @@
 <template>
-  <tr
-      class="table__content-row"
-      @dblclick="handleCellInteraction"
-      @mousedown="startLongPress"
-      @mouseup="endLongPress"
-      @touchstart="startLongPress"
-      @touchend="endLongPress"
-  >
+  <tr class="table__content-row">
     <td class="table__content-row-time" v-html="row.time"></td>
     <td :class="['table__content-row-color', `table__content-row-color--${row.type}`]"></td>
     <td class="table__content-row-lesson">
@@ -39,7 +32,7 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from 'vuex'
+import { mapGetters } from 'vuex'
 
 export default {
   name: 'ScheduleTableRow',
@@ -47,11 +40,6 @@ export default {
     row: {
       type: Object,
       required: true
-    }
-  },
-  data() {
-    return {
-      longPressTimer: null
     }
   },
   computed: {
@@ -69,41 +57,6 @@ export default {
     }
   },
   methods: {
-    ...mapActions(['addNote', 'openNoteDialog']),
-    handleCellInteraction() {
-      if (!this.isLessonExists) return
-      const selectedDate = this.selectedDay?.originalDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
-      let note = this.getNotes.find(note =>
-          note.lesson === this.row.lesson &&
-          note.time === this.row.time &&
-          note.date === selectedDate
-      )
-
-      if (!note) {
-        note = {
-          id: Date.now(),
-          lesson: this.row.lesson,
-          time: this.row.time,
-          content: '',
-          date: selectedDate,
-          teacher: this.row.teacher,
-          room: this.row.room
-        }
-        this.addNote(note)
-      }
-
-      this.openNoteDialog(note.id)
-    },
-    startLongPress(e) {
-      if (!this.isLessonExists) return // Блокируем если пары нет
-      e.preventDefault()
-      this.longPressTimer = setTimeout(() => {
-        this.handleCellInteraction()
-      }, 500)
-    },
-    endLongPress() {
-      clearTimeout(this.longPressTimer)
-    },
     handleNoteClick(e) {
       if (!this.isLessonExists) {
         e.preventDefault()
@@ -122,7 +75,7 @@ export default {
       )
 
       if (note) {
-        this.openNoteDialog(note.id)
+        this.$store.dispatch('openNoteDialog', note.id)
       }
     }
   }
