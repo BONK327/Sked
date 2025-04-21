@@ -89,9 +89,64 @@ export default {
     },
 
     getLessonForDay(dayIndex, time) {
-      if (!this.currentWeekSchedule || !this.currentWeekSchedule[dayIndex]) return null;
-      return this.currentWeekSchedule[dayIndex].find(lesson => lesson.time === time);
-    },
+  if (!this.currentWeekSchedule || !this.currentWeekSchedule[dayIndex]) return null;
+  const lesson = this.currentWeekSchedule[dayIndex].find(lesson => lesson.time === time);
+  if (!lesson) return null;
+  
+  const teacherStr = lesson.teachers 
+      ? lesson.teachers.map(t => {
+          let str = t.name;
+          if (t.subgroup) str += ` (подгр. ${t.subgroup})`;
+          return str;
+      }).join(', ')
+      : '';
+  
+  // Формируем строку аудиторий без повторений и с подгруппами
+  const roomStr = lesson.teachers 
+      ? this.getUniqueRoomsWithSubgroups(lesson.teachers)
+      : '';
+  
+  return {
+      ...lesson,
+      teacher: teacherStr,
+      room: roomStr
+  };
+},
+
+getUniqueRoomsWithSubgroups(teachers) {
+    const roomMap = {};
+    const allSubgroups = new Set();
+    
+    // Сначала собираем все существующие подгруппы
+    teachers.forEach(t => {
+      if (t.subgroup) {
+        allSubgroups.add(t.subgroup);
+      }
+    });
+    
+    // Группируем аудитории по номерам и собираем подгруппы
+    teachers.forEach(t => {
+      if (t.room) {
+        if (!roomMap[t.room]) {
+          roomMap[t.room] = new Set();
+        }
+        if (t.subgroup) {
+          roomMap[t.room].add(t.subgroup);
+        }
+      }
+    });
+    
+    // Формируем итоговую строку
+    return Object.entries(roomMap)
+      .map(([room, subgroups]) => {
+        // Не показываем подгруппы если в аудитории занимаются все подгруппы
+        if (subgroups.size > 0 && subgroups.size !== allSubgroups.size) {
+          return `${room} (подгр. ${Array.from(subgroups).join(', ')})`;
+        }
+        return room;
+      })
+      .join(', ');
+  },
 
     getTypeForLesson(dayIndex, time) {
       const lesson = this.getLessonForDay(dayIndex, time);

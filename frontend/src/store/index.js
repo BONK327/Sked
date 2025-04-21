@@ -1,5 +1,7 @@
 import { createStore } from 'vuex'
 
+const localhost = "127.0.0.1:3000";
+
 export default createStore({
     state: {
         notes: JSON.parse(localStorage.getItem('notes')) || [],
@@ -10,46 +12,36 @@ export default createStore({
         isAddNoteModalOpen: false,
         availableLessons: [],
         activeNoteId: null,
-        // Добавляем состояние для диалога заметки
         noteDialog: {
             isOpen: false,
             noteId: null
         },
         currentWeekOffset: 0,
+        currentWeekType: 'week1',
 
         weekDays: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
         fullDayNames: ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'],
         monthNames: ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'],
-        currentWeekType: 'week1', // 'week1' или 'week2'
+
         weeksData: {
-            week1: {
-                0: [], // Понедельник
-                1: [], // Вторник
-                2: [], // Среда
-                3: [], // Четверг
-                4: [], // Пятница
-                5: []  // Суббота
-            },
-            week2: {
-                0: [], // Понедельник
-                1: [], // Вторник
-                2: [], // Среда
-                3: [], // Четверг
-                4: [], // Пятница
-                5: []  // Суббота
-            }
+            week1: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
+            week2: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
         }
-
-
     },
     mutations: {
+        CLEAR_SCHEDULE(state) {
+            state.weeksData = {
+                week1: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
+                week2: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
+            }
+        },
         ADD_NOTE(state, note) {
             state.notes.push(note)
             localStorage.setItem('notes', JSON.stringify(state.notes))
         },
         UPDATE_NOTE(state, updatedNote) {
             const index = state.notes.findIndex(n => n.id === updatedNote.id)
-            if(index !== -1) {
+            if (index !== -1) {
                 state.notes.splice(index, 1, updatedNote)
                 localStorage.setItem('notes', JSON.stringify(state.notes))
             }
@@ -101,7 +93,32 @@ export default createStore({
             state.currentWeekType = weekType;
         },
         SET_WEEK_SCHEDULE(state, { weekType, dayIndex, schedule }) {
-            state.weeksData[weekType][dayIndex] = schedule;
+            state.weeksData[weekType][dayIndex] = schedule
+        },
+        SET_LOADING(state, isLoading) {
+            state.isLoading = isLoading
+        },
+        SET_ERROR(state, error) {
+            state.error = error
+        },
+        SET_CURRENT_GROUP(state, group) {
+            state.currentGroup = group
+            state.searchType = 'group'
+            localStorage.setItem('currentGroup', group)
+        },
+        SET_CURRENT_TEACHER(state, teacher) {
+            state.currentTeacher = teacher
+            state.searchType = 'teacher'
+        },
+        SET_CURRENT_ROOM(state, room) {
+            state.currentRoom = room
+            state.searchType = 'room'
+        },
+        CLEAR_SCHEDULE(state) {
+            state.weeksData = {
+                week1: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
+                week2: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
+            }
         }
 
     },
@@ -215,346 +232,103 @@ export default createStore({
         updateFullWeekSchedule({ commit }, { dayIndex, schedule }) {
             commit('SET_FULL_WEEK_SCHEDULE', { dayIndex, schedule })
         },
-        // async fetchFullWeekSchedule({ commit, state }) {
-        //     // Моковые данные для каждого дня недели
-        //     const mockData = {
-        //         0: [ // Понедельник
-        //             {
-        //                 time: '08:00<br>09:30',
-        //                 type: 'lection',
-        //                 lesson: 'Веб-дизайн и интернет-программирование',
-        //                 teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
-        //                 room: '635гл'
-        //             },
-        //             {
-        //                 time: '09:45<br>11:15',
-        //                 type: 'lection',
-        //                 lesson: 'Веб-дизайн и интернет-программирование',
-        //                 teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
-        //                 room: '635гл'
-        //             },
-        //             // ... остальные пары понедельника
-        //         ],
-        //         1: [ // Вторник
-        //             {
-        //                 time: '09:45<br>11:15',
-        //                 type: 'lection',
-        //                 lesson: 'Веб-дизайн и интернет-программирование',
-        //                 teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
-        //                 room: '635гл'
-        //             },
-        //         ],
-        //         // Заполнить данные для остальных дней
-        //         2: [ // Среда
-        //             {
-        //                 time: '08:00<br>09:30',
-        //                 type: 'lection',
-        //                 lesson: 'Веб-дизайн и интернет-программирование',
-        //                 teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
-        //                 room: '635гл'
-        //             },
-        //         ],
-        //         3: [ // Четверг
-        //             {
-        //                 time: '09:45<br>11:15',
-        //                 type: 'lection',
-        //                 lesson: 'Веб-дизайн и интернет-программирование',
-        //                 teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
-        //                 room: '635гл'
-        //             },
-        //         ],
-        //         4: [ // Пятница
-        //             {
-        //                 time: '08:00<br>09:30',
-        //                 type: 'lection',
-        //                 lesson: 'Веб-дизайн и интернет-программирование',
-        //                 teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
-        //                 room: '635гл'
-        //             },
-        //         ],
-        //         5: [ // Суббота
-        //             {
-        //                 time: '08:00<br>09:30',
-        //                 type: 'lection',
-        //                 lesson: 'Веб-дизайн и интернет-программирование',
-        //                 teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
-        //                 room: '635гл'
-        //             },
-        //             {
-        //                 time: '09:45<br>11:15',
-        //                 type: 'lection',
-        //                 lesson: 'Веб-дизайн и интернет-программирование',
-        //                 teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
-        //                 room: '635гл'
-        //             },
-        //             {
-        //                 time: '11:30<br>13:00',
-        //                 type: 'lection',
-        //                 lesson: 'Веб-дизайн и интернет-программирование',
-        //                 teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
-        //                 room: '635гл'
-        //             },
-        //             {
-        //                 time: '13:15<br>14:45',
-        //                 type: 'lection',
-        //                 lesson: 'Веб-дизайн и интернет-программирование',
-        //                 teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
-        //                 room: '635гл'
-        //             },
-        //             {
-        //                 time: '15:00<br>16:30',
-        //                 lesson: 'Веб-дизайн и интернет-программирование',
-        //                 teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
-        //                 room: '635гл'
-        //             },
-        //             {
-        //                 time: '16:45<br>18:15',
-        //                 type: 'lection',
-        //                 lesson: 'Веб-дизайн и интернет-программирование',
-        //                 teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
-        //                 room: '635гл'
-        //             }
-        //         ],
-        //
-        //     };
-        //
-        //     for (let dayIndex = 0; dayIndex < 6; dayIndex++) {
-        //         commit('SET_FULL_WEEK_SCHEDULE', {
-        //             dayIndex,
-        //             schedule: mockData[dayIndex] || []
-        //         });
-        //     }
-        // },
-        // async fetchFullWeekSchedule({ commit, state }) {
-        //     try {
-        //         // Здесь получаем данные для обеих недель
-        //         const response = await fetch('ваш_эндпоинт_парсера');
-        //         const data = await response.json();
-        //
-        //         // Заполняем данные для недель
-        //         for (let weekType of ['week1', 'week2']) {
-        //             for (let dayIndex = 0; dayIndex < 6; dayIndex++) {
-        //                 commit('SET_WEEK_SCHEDULE', {
-        //                     weekType,
-        //                     dayIndex,
-        //                     schedule: data[weekType][dayIndex] || []
-        //                 });
-        //             }
-        //         }
-        //     } catch (error) {
-        //         console.error('Ошибка загрузки расписания:', error);
-        //     }
-        // },
 
-        async fetchFullWeekSchedule({ commit, state }) {
+
+
+
+
+
+
+
+        async searchSchedule({ commit, dispatch }, { type, query }) {
             try {
-                // Моковые данные для недель
-                const mockData = {
-                    week1: {
-                        0: [ // Понедельник
-                            {
-                                time: '08:00<br>09:30',
-                                type: 'lection',
-                                lesson: 'Веб-дизайн и интернет-программирование',
-                                teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
-                                room: '635гл'
-                            },
-                            {
-                                time: '09:45<br>11:15',
-                                type: 'lection',
-                                lesson: 'Математический анализ',
-                                teacher: 'ПИ2303/1 Иванов А.А., ПИ2303/2 Петров Б.Б.',
-                                room: '420гл'
-                            },
-                            {
-                                time: '11:30<br>13:00',
-                                type: 'seminar',
-                                lesson: 'Иностранный язык',
-                                teacher: 'ПИ2303/1 Смирнова Е.В.',
-                                room: '305'
-                            }
-                        ],
-                        1: [ // Вторник
-                            {
-                                time: '13:50<br>15:20',
-                                type: 'seminar',
-                                lesson: 'Физическая культура',
-                                teacher: '',
-                                room: 'Спортзал'
-                            },
-                            {
-                                time: '15:35<br>17:05',
-                                type: 'lection',
-                                lesson: 'Дискретная математика',
-                                teacher: 'ПИ2303/1 Сидоров В.В., ПИ2303/2 Кузнецова Г.Г.',
-                                room: '512гл'
-                            }
-                        ],
-                        2: [ // Среда
-                            {
-                                time: '08:00<br>09:30',
-                                type: 'seminar',
-                                lesson: 'Программирование на Python',
-                                teacher: 'ПИ2303/1 Козлов Д.Д.',
-                                room: '410'
-                            },
-                            {
-                                time: '09:45<br>11:15',
-                                type: 'lection',
-                                lesson: 'Архитектура компьютеров',
-                                teacher: 'ПИ2303/1-2 Волков Е.Е.',
-                                room: '215гл'
-                            }
-                        ],
-                        3: [ // Четверг
-                            {
-                                time: '11:30<br>13:00',
-                                type: 'seminar',
-                                lesson: 'Базы данных',
-                                teacher: 'ПИ2303/1 Новикова Ж.Ж.',
-                                room: '320'
-                            }
-                        ],
-                        4: [ // Пятница
-                            {
-                                time: '13:50<br>15:20',
-                                type: 'lection',
-                                lesson: 'Теория алгоритмов',
-                                teacher: 'ПИ2303/1-2 Соколов З.З.',
-                                room: '105гл'
-                            },
-                            {
-                                time: '15:35<br>17:05',
-                                type: 'seminar',
-                                lesson: 'Операционные системы',
-                                teacher: 'ПИ2303/1 Белов И.И.',
-                                room: '210'
-                            }
-                        ],
-                        5: [ // Суббота
-                            {
-                                time: '08:00<br>09:30',
-                                type: 'seminar',
-                                lesson: 'Компьютерные сети',
-                                teacher: 'ПИ2303/2 Григорьев К.К.',
-                                room: '315'
-                            },
-                            {
-                                time: '09:45<br>11:15',
-                                type: 'lection',
-                                lesson: 'Криптография',
-                                teacher: 'ПИ2303/1-2 Михайлов Л.Л.',
-                                room: '120гл'
-                            }
-                        ]
-                    },
-                    week2: {
-                        0: [ // Понедельник
-                            {
-                                time: '08:00<br>09:30',
-                                type: 'seminar',
-                                lesson: 'Веб-дизайн и интернет-программирование',
-                                teacher: 'ПИ2303/1 Лаптев С.В., ПИ2303/2 Чемарина А.В',
-                                room: '635гл'
-                            },
-                            {
-                                time: '09:45<br>11:15',
-                                type: 'seminar',
-                                lesson: 'Математический анализ',
-                                teacher: 'ПИ2303/1 Иванов А.А., ПИ2303/2 Петров Б.Б.',
-                                room: '420гл'
-                            }
-                        ],
-                        1: [ // Вторник
-                            {
-                                time: '11:30<br>13:00',
-                                type: 'lection',
-                                lesson: 'Иностранный язык',
-                                teacher: 'ПИ2303/1 Смирнова Е.В.',
-                                room: '305'
-                            },
-                            {
-                                time: '13:50<br>15:20',
-                                type: 'lection',
-                                lesson: 'Физическая культура',
-                                teacher: '',
-                                room: 'Спортзал'
-                            }
-                        ],
-                        2: [ // Среда
-                            {
-                                time: '15:35<br>17:05',
-                                type: 'seminar',
-                                lesson: 'Дискретная математика',
-                                teacher: 'ПИ2303/1 Сидоров В.В., ПИ2303/2 Кузнецова Г.Г.',
-                                room: '512гл'
-                            }
-                        ],
-                        3: [ // Четверг
-                            {
-                                time: '08:00<br>09:30',
-                                type: 'lection',
-                                lesson: 'Программирование на Python',
-                                teacher: 'ПИ2303/1 Козлов Д.Д.',
-                                room: '410'
-                            },
-                            {
-                                time: '09:45<br>11:15',
-                                type: 'seminar',
-                                lesson: 'Архитектура компьютеров',
-                                teacher: 'ПИ2303/1-2 Волков Е.Е.',
-                                room: '215гл'
-                            }
-                        ],
-                        4: [ // Пятница
-                            {
-                                time: '11:30<br>13:00',
-                                type: 'lection',
-                                lesson: 'Базы данных',
-                                teacher: 'ПИ2303/1 Новикова Ж.Ж.',
-                                room: '320'
-                            },
-                            {
-                                time: '13:50<br>15:20',
-                                type: 'seminar',
-                                lesson: 'Теория алгоритмов',
-                                teacher: 'ПИ2303/1-2 Соколов З.З.',
-                                room: '105гл'
-                            }
-                        ],
-                        5: [ // Суббота
-                            {
-                                time: '15:35<br>17:05',
-                                type: 'lection',
-                                lesson: 'Операционные системы',
-                                teacher: 'ПИ2303/1 Белов И.И.',
-                                room: '210'
-                            },
-                            {
-                                time: '17:20<br>18:50',
-                                type: 'seminar',
-                                lesson: 'Компьютерные сети',
-                                teacher: 'ПИ2303/2 Григорьев К.К.',
-                                room: '315'
-                            }
-                        ]
-                    }
-                };
+                commit('SET_LOADING', true)
+                commit('CLEAR_SCHEDULE')
 
-                for (let weekType of ['week1', 'week2']) {
-                    for (let dayIndex = 0; dayIndex < 6; dayIndex++) {
-                        commit('SET_WEEK_SCHEDULE', {
-                            weekType,
-                            dayIndex,
-                            schedule: mockData[weekType][dayIndex] || []
-                        });
-                    }
+                switch (type) {
+                    case 'group':
+                        commit('SET_CURRENT_GROUP', query)
+                        break
+                    case 'teacher':
+                        commit('SET_CURRENT_TEACHER', query)
+                        break
+                    case 'room':
+                        commit('SET_CURRENT_ROOM', query)
+                        break
                 }
+
+                await dispatch('fetchFullWeekSchedule')
             } catch (error) {
-                console.error('Ошибка загрузки расписания:', error);
+                commit('SET_ERROR', error.message)
+                console.error('Ошибка поиска:', error)
+            } finally {
+                commit('SET_LOADING', false)
             }
         },
 
+
+        async fetchFullWeekSchedule({ commit, state }) {
+            try {
+              commit('SET_LOADING', true)
+              commit('CLEAR_SCHEDULE')
+              
+              if (!state.currentGroup) return
+              
+              const response = await fetch(`http://${localhost}/groups/${state.currentGroup}`)
+              
+              if (!response.ok) throw new Error('Ошибка загрузки расписания')
+              
+              const scheduleData = await response.json()
+              
+              const formatLessonTime = (number) => {
+                const times = {
+                  1: '08:00<br>09:30',
+                  2: '09:45<br>11:15',
+                  3: '11:30<br>13:00',
+                  4: '13:50<br>15:20',
+                  5: '15:35<br>17:05',
+                  6: '17:20<br>18:50'
+                }
+                return times[number] || ''
+              }
+              
+              const transformedData = {
+                week1: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
+                week2: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
+              }
+              
+              scheduleData.lessons.forEach(lesson => {
+                const weekType = `week${lesson.numberWeek}`
+                const dayIndex = lesson.numberDay - 1
+                
+                const transformedLesson = {
+                  time: formatLessonTime(lesson.number),
+                  type: lesson.type,
+                  lesson: lesson.name,
+                  teachers: lesson.details,
+                  room: lesson.details[0]?.room || ''
+                }
+                
+                transformedData[weekType][dayIndex].push(transformedLesson)
+              })
+              
+              for (const weekType of ['week1', 'week2']) {
+                for (let dayIndex = 0; dayIndex < 6; dayIndex++) {
+                  commit('SET_WEEK_SCHEDULE', {
+                    weekType,
+                    dayIndex,
+                    schedule: transformedData[weekType][dayIndex] || []
+                  })
+                }
+              }
+              
+            } catch (error) {
+              console.error('Ошибка загрузки расписания:', error)
+              commit('SET_ERROR', error.message)
+            } finally {
+              commit('SET_LOADING', false)
+            }
+          },
 
         setCurrentWeekType({ commit }, weekType) {
             commit('SET_CURRENT_WEEK_TYPE', weekType);

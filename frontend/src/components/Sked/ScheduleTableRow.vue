@@ -54,7 +54,8 @@ export default {
           note.time === this.row.time &&
           note.date === selectedDate
       )
-    }
+    },
+    
   },
   methods: {
     handleNoteClick(e) {

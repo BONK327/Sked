@@ -50,21 +50,70 @@ export default {
       return this.dayIndex === 5 ? saturdayRows : defaultRows
     },
     normalizedRows() {
-      return this.timeSlots.map(defaultRow => {
-        const dataRow = this.currentDaySchedule.find(r => r.time === defaultRow.time) || {}
-        return {
-          ...defaultRow,
-          type: dataRow.type || defaultRow.type,
-          lesson: dataRow.lesson || '',
-          teacher: dataRow.teacher || '',
-          room: dataRow.room || ''
-        }
-      })
-    }
+  return this.timeSlots.map(defaultRow => {
+    const dataRow = this.currentDaySchedule.find(r => r.time === defaultRow.time) || {};
+    
+    // Формируем строку преподавателей с подгруппами
+    const teacherStr = dataRow.teachers 
+        ? dataRow.teachers.map(t => {
+            let str = t.name;
+            if (t.subgroup) str += ` (подгр. ${t.subgroup})`;
+            return str;
+        }).join(', ')
+        : '';
+        
+    // Формируем строку аудиторий без повторений и с подгруппами
+    const roomStr = dataRow.teachers 
+        ? this.getUniqueRoomsWithSubgroups(dataRow.teachers)
+        : '';
+        
+    return {
+        ...defaultRow,
+        type: dataRow.type || defaultRow.type,
+        lesson: dataRow.lesson || '',
+        teacher: teacherStr,
+        room: roomStr
+    };
+  });
+},
   },
   methods: {
-    ...mapActions(['updateAvailableLessons', 'updateFullWeekSchedule'])
+    ...mapActions(['updateAvailableLessons', 'updateFullWeekSchedule']),
+    getUniqueRoomsWithSubgroups(teachers) {
+    const roomMap = {};
+    const allSubgroups = new Set();
+    
+    // Сначала собираем все существующие подгруппы
+    teachers.forEach(t => {
+      if (t.subgroup) {
+        allSubgroups.add(t.subgroup);
+      }
+    });
+    
+    // Группируем аудитории по номерам и собираем подгруппы
+    teachers.forEach(t => {
+      if (t.room) {
+        if (!roomMap[t.room]) {
+          roomMap[t.room] = new Set();
+        }
+        if (t.subgroup) {
+          roomMap[t.room].add(t.subgroup);
+        }
+      }
+    });
+    
+    // Формируем итоговую строку
+    return Object.entries(roomMap)
+      .map(([room, subgroups]) => {
+        // Не показываем подгруппы если в аудитории занимаются все подгруппы
+        if (subgroups.size > 0 && subgroups.size !== allSubgroups.size) {
+          return `${room} (${Array.from(subgroups).join(', ')})`;
+        }
+        return room;
+      })
+      .join('');
   },
+},
   watch: {
     normalizedRows: {
       immediate: true,
