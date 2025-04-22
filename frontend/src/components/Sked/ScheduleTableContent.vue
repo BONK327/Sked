@@ -59,7 +59,7 @@ export default {
             let str = t.name;
             if (t.subgroup) str += ` (подгр. ${t.subgroup})`;
             return str;
-        }).join(', ')
+        }).join(`, `)
         : '';
         
     // Формируем строку аудиторий без повторений и с подгруппами
@@ -111,7 +111,9 @@ export default {
         }
         return room;
       })
-      .join('');
+      .join(', ');
+
+      
   },
 },
   watch: {

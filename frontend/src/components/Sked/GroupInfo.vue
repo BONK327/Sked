@@ -1,15 +1,18 @@
 <template>
   <section class="name">
-    <h1 class="name__title">ПИ2303</h1>
+    <h1 class="name__title">{{ currentGroup }}</h1>
     <strong class="name__slash">|</strong>
     <h2 class="name__week">{{ weekName }}</h2>
   </section>
 </template>
 
 <script>
+import { mapGetters } from 'vuex'
+
 export default {
   name: 'GroupInfo',
   computed: {
+    ...mapGetters(['currentGroup']),
     weekName() {
       const weekType = this.$store.getters.currentWeekType;
       return weekType === 'week1' ? 'Неделя 1' : 'Неделя 2';

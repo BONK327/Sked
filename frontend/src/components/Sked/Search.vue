@@ -24,7 +24,7 @@
 </template>
 
 <script>
-import { mapActions } from 'vuex'
+import { mapActions, mapMutations } from 'vuex'
 
 export default {
   name: 'Search',
@@ -35,16 +35,19 @@ export default {
   },
   methods: {
     ...mapActions(['searchSchedule']),
+    ...mapMutations(['SET_CURRENT_GROUP']),
     
     handleSearch() {
-      if (this.groupInput.trim()) {
-        this.searchSchedule({
-          type: 'group',
-          query: this.groupInput.trim().toUpperCase()
-        })
-      }
+    if (this.groupInput.trim()) {
+      const group = this.groupInput.trim().toUpperCase()
+      this.SET_CURRENT_GROUP(group) // Сохраняем группу в хранилище
+      this.searchSchedule({
+        type: 'group',
+        query: group
+      })
     }
   }
+}
 }
 </script>
 

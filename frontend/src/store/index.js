@@ -26,9 +26,14 @@ export default createStore({
         weeksData: {
             week1: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
             week2: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
-        }
+        },
+        currentGroup: localStorage.getItem('currentGroup') || null,
     },
     mutations: {
+        SET_CURRENT_GROUP(state, group) {
+            state.currentGroup = group
+            localStorage.setItem('currentGroup', group)
+          },
         CLEAR_SCHEDULE(state) {
             state.weeksData = {
                 week1: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
@@ -287,7 +292,13 @@ export default createStore({
                   3: '11:30<br>13:00',
                   4: '13:50<br>15:20',
                   5: '15:35<br>17:05',
-                  6: '17:20<br>18:50'
+                  6: '17:20<br>18:50',
+                  11: '08:00<br>09:30',
+                  12: '09:45<br>11:15',
+                  13: '11:30<br>13:00',
+                  14: '13:15<br>14:45',
+                  15: '15:00<br>16:30',
+                  16: '16:45<br>18:15'
                 }
                 return times[number] || ''
               }
@@ -300,9 +311,16 @@ export default createStore({
               scheduleData.lessons.forEach(lesson => {
                 const weekType = `week${lesson.numberWeek}`
                 const dayIndex = lesson.numberDay - 1
-                
+                let num = 0;
+                if(lesson.numberDay == 6) {
+                    num = lesson.number + 10; 
+                }
+                else {
+                    num = lesson.number
+                }
                 const transformedLesson = {
-                  time: formatLessonTime(lesson.number),
+                    
+                  time: formatLessonTime(num),
                   type: lesson.type,
                   lesson: lesson.name,
                   teachers: lesson.details,
@@ -364,6 +382,7 @@ export default createStore({
         canNavigateNext: state => state.currentWeekOffset < 2,
         currentWeekType: state => state.currentWeekType,
         currentWeekSchedule: state => state.weeksData[state.currentWeekType] || {},
+        currentGroup: state => state.currentGroup,
         getWeekTypeByOffset: (state) => (offset) => {
             // Определяем тип недели по абсолютному смещению
             const absoluteOffset = Math.abs(offset);
