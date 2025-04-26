@@ -8,7 +8,7 @@ class RoomController {
 
     async getScheduleByName(req, res) {
         try {
-            const { name } = req.params;
+            const name = req.params.name.replaceAll("_", " ");
             const schedule = await this.roomService.getRoomSchedule(name);
             res.json(schedule);
         } catch (error) {
