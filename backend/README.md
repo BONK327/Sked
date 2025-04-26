@@ -1,15 +1,15 @@
 <h2>Изменение поиска расписания по преподавателю</h2>
-Было:
-/api/teachers/Параскевов
-Стало:
-/api/teachers/Параскевов_А_В
+Было:<br>
+/api/teachers/Параскевов<br>
+Стало:<br>
+/api/teachers/Параскевов_А_В<br>
 
 <h2>Добавлен функционал получения всех групп, преподавателей и аудиторий</h2>
-POST-запрос
-адрес: /api/users
-тело запроса:
-{
-    "id": 123231,
-    "firstname": "cdwcd",
-    "username": "cdwwcc"
-}
+POST-запрос<br>
+адрес: /api/users<br>
+тело запроса:<br>
+{<br>
+    "id": 123231,<br>
+    "firstname": "cdwcd",<br>
+    "username": "cdwwcc"<br>
+}<br>
