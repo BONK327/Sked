@@ -89,27 +89,51 @@ export default {
     },
 
     getLessonForDay(dayIndex, time) {
-  if (!this.currentWeekSchedule || !this.currentWeekSchedule[dayIndex]) return null;
-  const lesson = this.currentWeekSchedule[dayIndex].find(lesson => lesson.time === time);
+  const lesson = this.currentDaySchedule.find(r => r.time === time);
   if (!lesson) return null;
   
-  const teacherStr = lesson.teachers 
+  let detailsStr = '';
+  
+  if (this.$store.state.searchType === 'group') {
+    // Формат для групп
+    detailsStr = lesson.teachers 
       ? lesson.teachers.map(t => {
           let str = t.name;
-          if (t.subgroup) str += ` (подгр. ${t.subgroup})`;
+          if (t.subgroup) str += ` (${t.subgroup})`;
           return str;
-      }).join(', ')
+        }).join(', ')
       : '';
-  
-  // Формируем строку аудиторий без повторений и с подгруппами
-  const roomStr = lesson.teachers 
-      ? this.getUniqueRoomsWithSubgroups(lesson.teachers)
+  } else if (this.$store.state.searchType === 'teacher') {
+    // Формат для преподавателей
+    detailsStr = lesson.details 
+      ? lesson.details.map(d => {
+          let str = d.group;
+          if (d.subgroup) str += ` (${d.subgroup})`;
+          return str;
+        }).join(', ')
       : '';
+  } else if (this.$store.state.searchType === 'room') {
+    // Формат для аудиторий
+    detailsStr = lesson.details 
+      ? lesson.details.map(d => {
+          let str = d.name;
+          if (d.groups) {
+            const groupsStr = d.groups.map(g => {
+              let groupStr = g.group;
+              if (g.subgroup) groupStr += ` (${g.subgroup})`;
+              return groupStr;
+            }).join(', ');
+            str += ` - ${groupsStr}`;
+          }
+          return str;
+        }).join(', ')
+      : '';
+  }
   
   return {
-      ...lesson,
-      teacher: teacherStr,
-      room: roomStr
+    ...lesson,
+    details: detailsStr,
+    room: lesson.room || ''
   };
 },
 

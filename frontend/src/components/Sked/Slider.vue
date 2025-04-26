@@ -76,7 +76,7 @@ export default {
     }
   },
   computed: {
-    ...mapGetters(['selectedDayIndex', 'days', 'currentWeekType']),
+    ...mapGetters(['selectedDayIndex', 'days', 'currentWeekType', 'currentWeekNumber']),
     currentDayIndex() {
       const today = new Date()
       if (today.getDay() === 0) return 0 // Если воскресенье, показываем понедельник
@@ -85,6 +85,12 @@ export default {
   },
   methods: {
     ...mapActions(['setSelectedDay', 'setCurrentWeekType']),
+
+    resetWeekState() {
+    this.weekOffset = 0;
+    localStorage.removeItem('currentWeekNumber');
+    this.updateDays();
+  },
 
     handleDayClick(index) {
       const clickedDate = new Date(this.days[index].originalDate);
@@ -169,37 +175,50 @@ export default {
     },
 
     prevWeek() {
-      if (this.weekOffset > -2) {
-        this.weekOffset--;
-        // Сохраняем индекс выбранного дня перед обновлением
-        const selectedIndex = this.days.findIndex(day => day.isActive);
-        this.updateDays();
-        // Восстанавливаем выбранный день после обновления
-        if (selectedIndex >= 0) {
-          this.handleDayClick(selectedIndex);
-        }
+    if (this.weekOffset > -2) {
+      this.weekOffset--;
+      const newWeek = this.currentWeekNumber === 1 ? 2 : 1;
+      this.$store.commit('SET_CURRENT_WEEK_NUMBER', newWeek);
+      this.$store.commit('SET_CURRENT_WEEK_TYPE', `week${newWeek}`);
+      this.updateDays();
+      // Просто обновляем выбранный день
+      const selectedIndex = this.days.findIndex(day => day.isActive);
+      if (selectedIndex >= 0) {
+        this.handleDayClick(selectedIndex);
       }
-    },
-
-    nextWeek() {
-      if (this.weekOffset < 2) {
-        this.weekOffset++;
-        // Сохраняем индекс выбранного дня перед обновлением
-        const selectedIndex = this.days.findIndex(day => day.isActive);
-        this.updateDays();
-        // Восстанавливаем выбранный день после обновления
-        if (selectedIndex >= 0) {
-          this.handleDayClick(selectedIndex);
-        }
-      }
-    },
-
-    updateWeekType() {
-      const weekType = this.$store.getters.getWeekTypeByOffset(this.weekOffset)
-      this.$store.dispatch('setCurrentWeekType', weekType)
     }
   },
+  
+  nextWeek() {
+    if (this.weekOffset < 2) {
+      this.weekOffset++;
+      const newWeek = this.currentWeekNumber === 1 ? 2 : 1;
+      this.$store.commit('SET_CURRENT_WEEK_NUMBER', newWeek);
+      this.$store.commit('SET_CURRENT_WEEK_TYPE', `week${newWeek}`);
+      this.updateDays();
+      // Просто обновляем выбранный день
+      const selectedIndex = this.days.findIndex(day => day.isActive);
+      if (selectedIndex >= 0) {
+        this.handleDayClick(selectedIndex);
+      }
+    }
+  },
+  
+  updateWeekType() {
+    const weekType = this.$store.getters.getWeekTypeByOffset(this.weekOffset);
+    this.$store.dispatch('setCurrentWeekType', weekType);
+  }
+  },
   watch: {
+    currentGroup() {
+    this.resetWeekState();
+  },
+  currentTeacher() {
+    this.resetWeekState();
+  },
+  currentRoom() {
+    this.resetWeekState();
+  },
     selectedDayIndex(newIndex) {
       if (newIndex !== undefined && this.days[newIndex]) {
         const day = this.days[newIndex];

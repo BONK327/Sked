@@ -1,6 +1,10 @@
 <template>
   <section class="name">
-    <h1 class="name__title">{{ currentGroup }}</h1>
+    <h1 class="name__title">
+      <span v-if="currentGroup">{{ currentGroup }}</span>
+      <span v-else-if="currentTeacher">{{ currentTeacher }}</span>
+      <span v-else-if="currentRoom">{{ currentRoom }}</span>
+    </h1>
     <strong class="name__slash">|</strong>
     <h2 class="name__week">{{ weekName }}</h2>
   </section>
@@ -12,10 +16,19 @@ import { mapGetters } from 'vuex'
 export default {
   name: 'GroupInfo',
   computed: {
-    ...mapGetters(['currentGroup']),
+    ...mapGetters([
+      'currentGroup', 
+      'currentTeacher', 
+      'currentRoom', 
+      'currentWeekNumber',
+      'currentWeekType'
+    ]),
     weekName() {
-      const weekType = this.$store.getters.currentWeekType;
-      return weekType === 'week1' ? 'Неделя 1' : 'Неделя 2';
+      if (this.currentWeekNumber !== null) {
+        return `Неделя ${this.currentWeekNumber}`;
+      }
+      // Резервный вариант, если по какой-то причине номер недели не установлен
+      return this.currentWeekType === 'week1' ? 'Неделя 1' : 'Неделя 2';
     }
   }
 }

@@ -53,26 +53,13 @@ export default {
   return this.timeSlots.map(defaultRow => {
     const dataRow = this.currentDaySchedule.find(r => r.time === defaultRow.time) || {};
     
-    // Формируем строку преподавателей с подгруппами
-    const teacherStr = dataRow.teachers 
-        ? dataRow.teachers.map(t => {
-            let str = t.name;
-            if (t.subgroup) str += ` (подгр. ${t.subgroup})`;
-            return str;
-        }).join(`, `)
-        : '';
-        
-    // Формируем строку аудиторий без повторений и с подгруппами
-    const roomStr = dataRow.teachers 
-        ? this.getUniqueRoomsWithSubgroups(dataRow.teachers)
-        : '';
-        
     return {
-        ...defaultRow,
-        type: dataRow.type || defaultRow.type,
-        lesson: dataRow.lesson || '',
-        teacher: teacherStr,
-        room: roomStr
+      ...defaultRow,
+      type: dataRow.type || defaultRow.type,
+      lesson: dataRow.lesson || '',
+      teachers: dataRow.teachers || [],
+      room: dataRow.room || '',
+      details: dataRow.details || []
     };
   });
 },

@@ -1,7 +1,12 @@
 import { createStore } from 'vuex'
 
 const localhost = "127.0.0.1:3000";
-
+// В хранилище добавляем:
+function getWeekNumberByDate(date = new Date()) {
+    const startOfYear = new Date(date.getFullYear(), 0, 1);
+    const days = Math.floor((date - startOfYear) / (24 * 60 * 60 * 1000));
+    return Math.floor(days / 7) % 2 + 1; // 1 или 2
+}
 export default createStore({
     state: {
         notes: JSON.parse(localStorage.getItem('notes')) || [],
@@ -18,7 +23,9 @@ export default createStore({
         },
         currentWeekOffset: 0,
         currentWeekType: 'week1',
-
+        
+        currentWeekNumber: parseInt(localStorage.getItem('currentWeekNumber')) || 1,
+        baseWeekNumber: null,
         weekDays: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
         fullDayNames: ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'],
         monthNames: ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'],
@@ -28,17 +35,37 @@ export default createStore({
             week2: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
         },
         currentGroup: localStorage.getItem('currentGroup') || null,
+        currentTeacher: null,
+        currentRoom: null,
+        searchType: 'group' // 'group', 'teacher' или 'room'
+
+
     },
     mutations: {
         SET_CURRENT_GROUP(state, group) {
-            state.currentGroup = group
-            localStorage.setItem('currentGroup', group)
-          },
+            state.currentGroup = group;
+            state.searchType = 'group';
+            localStorage.setItem('currentGroup', group);
+        },
+        SET_CURRENT_TEACHER(state, teacher) {
+            state.currentTeacher = teacher;
+            state.searchType = 'teacher';
+        },
+        SET_CURRENT_ROOM(state, room) {
+            state.currentRoom = room;
+            state.searchType = 'room';
+        },
+        CLEAR_SEARCH(state) {
+            state.currentGroup = null;
+            state.currentTeacher = null;
+            state.currentRoom = null;
+        },
         CLEAR_SCHEDULE(state) {
             state.weeksData = {
                 week1: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
                 week2: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
-            }
+            };
+
         },
         ADD_NOTE(state, note) {
             state.notes.push(note)
@@ -97,6 +124,13 @@ export default createStore({
         SET_CURRENT_WEEK_TYPE(state, weekType) {
             state.currentWeekType = weekType;
         },
+        SET_CURRENT_WEEK_NUMBER(state, number) {
+            state.currentWeekNumber = number;
+            localStorage.setItem('currentWeekNumber', number.toString());
+          },
+          SET_BASE_WEEK_NUMBER(state, number) {
+            state.baseWeekNumber = number;
+          },
         SET_WEEK_SCHEDULE(state, { weekType, dayIndex, schedule }) {
             state.weeksData[weekType][dayIndex] = schedule
         },
@@ -124,7 +158,7 @@ export default createStore({
                 week1: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
                 week2: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
             }
-        }
+        },
 
     },
     actions: {
@@ -207,6 +241,14 @@ export default createStore({
             dispatch('updateDays')
         },
 
+        updateWeekNumber({ commit, state }, offset) {
+            const baseWeek = state.baseWeekNumber || 1;
+            // Определяем номер недели с учетом смещения
+            // Каждое изменение offset на 1 - это смена недели (1<->2)
+            const newWeekNumber = ((baseWeek - 1 + offset) % 2 + 2) % 2 + 1;
+            commit('SET_CURRENT_WEEK_NUMBER', newWeekNumber);
+          },
+
         selectDay({ commit, state }, index) {
             commit('SET_SELECTED_DAY_INDEX', index)
             const day = state.days[index]
@@ -247,106 +289,148 @@ export default createStore({
 
         async searchSchedule({ commit, dispatch }, { type, query }) {
             try {
-                commit('SET_LOADING', true)
-                commit('CLEAR_SCHEDULE')
+                commit('SET_LOADING', true);
+                commit('CLEAR_SCHEDULE');
+                commit('CLEAR_SEARCH');
 
                 switch (type) {
                     case 'group':
-                        commit('SET_CURRENT_GROUP', query)
-                        break
+                        commit('SET_CURRENT_GROUP', query);
+                        break;
                     case 'teacher':
-                        commit('SET_CURRENT_TEACHER', query)
-                        break
+                        commit('SET_CURRENT_TEACHER', query);
+                        break;
                     case 'room':
-                        commit('SET_CURRENT_ROOM', query)
-                        break
+                        commit('SET_CURRENT_ROOM', query);
+                        break;
                 }
 
-                await dispatch('fetchFullWeekSchedule')
+                await dispatch('fetchFullWeekSchedule');
             } catch (error) {
-                commit('SET_ERROR', error.message)
-                console.error('Ошибка поиска:', error)
+                commit('SET_ERROR', error.message);
+                console.error('Ошибка поиска:', error);
             } finally {
-                commit('SET_LOADING', false)
+                commit('SET_LOADING', false);
             }
         },
 
-
         async fetchFullWeekSchedule({ commit, state }) {
             try {
-              commit('SET_LOADING', true)
-              commit('CLEAR_SCHEDULE')
-              
-              if (!state.currentGroup) return
-              
-              const response = await fetch(`http://${localhost}/groups/${state.currentGroup}`)
-              
-              if (!response.ok) throw new Error('Ошибка загрузки расписания')
-              
-              const scheduleData = await response.json()
-              
-              const formatLessonTime = (number) => {
-                const times = {
-                  1: '08:00<br>09:30',
-                  2: '09:45<br>11:15',
-                  3: '11:30<br>13:00',
-                  4: '13:50<br>15:20',
-                  5: '15:35<br>17:05',
-                  6: '17:20<br>18:50',
-                  11: '08:00<br>09:30',
-                  12: '09:45<br>11:15',
-                  13: '11:30<br>13:00',
-                  14: '13:15<br>14:45',
-                  15: '15:00<br>16:30',
-                  16: '16:45<br>18:15'
+                commit('SET_LOADING', true);
+                commit('CLEAR_SCHEDULE');
+
+                let endpoint, query;
+
+                switch (state.searchType) {
+                    case 'group':
+                        if (!state.currentGroup) return;
+                        endpoint = 'groups';
+                        query = encodeURIComponent(state.currentGroup);
+                        break;
+                    case 'teacher':
+                        if (!state.currentTeacher) return;
+                        endpoint = 'teachers';
+                        query = encodeURIComponent(state.currentTeacher);
+                        break;
+                    case 'room':
+                        if (!state.currentRoom) return;
+                        endpoint = 'rooms';
+                        query = encodeURIComponent(state.currentRoom);
+                        break;
+                    default:
+                        return;
                 }
-                return times[number] || ''
-              }
-              
-              const transformedData = {
-                week1: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
-                week2: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
-              }
-              
-              scheduleData.lessons.forEach(lesson => {
-                const weekType = `week${lesson.numberWeek}`
-                const dayIndex = lesson.numberDay - 1
-                let num = 0;
-                if(lesson.numberDay == 6) {
-                    num = lesson.number + 10; 
-                }
-                else {
-                    num = lesson.number
-                }
-                const transformedLesson = {
+
+                const response = await fetch(`http://${localhost}/api/${endpoint}/${query}`);
+                if (!response.ok) throw new Error('Ошибка загрузки расписания');
+
+                const scheduleData = await response.json();
+
+                if (scheduleData.lessons?.length > 0) {
+                    const baseWeek = scheduleData.lessons[0].numberWeek;
+                    commit('SET_BASE_WEEK_NUMBER', baseWeek);
                     
-                  time: formatLessonTime(num),
-                  type: lesson.type,
-                  lesson: lesson.name,
-                  teachers: lesson.details,
-                  room: lesson.details[0]?.room || ''
+                    // Не перезаписываем текущую неделю, только если она не установлена
+                    if (!state.currentWeekNumber) {
+                      commit('SET_CURRENT_WEEK_NUMBER', baseWeek);
+                    }
+                    
+                    commit('SET_CURRENT_WEEK_TYPE', `week${state.currentWeekNumber}`);
+                  }
+
+
+
+
+
+                const formatLessonTime = (number) => {
+                    const times = {
+                        1: '08:00<br>09:30',
+                        2: '09:45<br>11:15',
+                        3: '11:30<br>13:00',
+                        4: '13:50<br>15:20',
+                        5: '15:35<br>17:05',
+                        6: '17:20<br>18:50',
+                        11: '08:00<br>09:30',
+                        12: '09:45<br>11:15',
+                        13: '11:30<br>13:00',
+                        14: '13:15<br>14:45',
+                        15: '15:00<br>16:30',
+                        16: '16:45<br>18:15'
+                    }
+                    return times[number] || ''
                 }
-                
-                transformedData[weekType][dayIndex].push(transformedLesson)
-              })
-              
-              for (const weekType of ['week1', 'week2']) {
-                for (let dayIndex = 0; dayIndex < 6; dayIndex++) {
-                  commit('SET_WEEK_SCHEDULE', {
-                    weekType,
-                    dayIndex,
-                    schedule: transformedData[weekType][dayIndex] || []
-                  })
+
+                const transformedData = {
+                    week1: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
+                    week2: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
                 }
-              }
-              
+
+                scheduleData.lessons.forEach(lesson => {
+                    const weekType = `week${lesson.numberWeek}`;
+                    const dayIndex = lesson.numberDay - 1;
+                    let num = lesson.numberDay === 6 ? lesson.number + 10 : lesson.number;
+
+                    const transformedLesson = {
+                        time: formatLessonTime(num),
+                        type: lesson.type,
+                        lesson: lesson.name,
+                        weekNumber: lesson.numberWeek // Сохраняем номер недели из API
+                    };
+
+                    if (state.searchType === 'group') {
+                        transformedLesson.teachers = lesson.details || [];
+                    }
+                    else if (state.searchType === 'teacher') {
+                        transformedLesson.room = lesson.room || '';
+                        transformedLesson.details = lesson.details || [];
+                    }
+                    else if (state.searchType === 'room') {
+                        transformedLesson.details = lesson.details?.map(d => ({
+                            name: d.name,
+                            groups: d.groups || []
+                        })) || [];
+                    }
+
+                    transformedData[weekType][dayIndex].push(transformedLesson);
+                });
+
+                for (const weekType of ['week1', 'week2']) {
+                    for (let dayIndex = 0; dayIndex < 6; dayIndex++) {
+                        commit('SET_WEEK_SCHEDULE', {
+                            weekType,
+                            dayIndex,
+                            schedule: transformedData[weekType][dayIndex] || []
+                        })
+                    }
+                }
+
             } catch (error) {
-              console.error('Ошибка загрузки расписания:', error)
-              commit('SET_ERROR', error.message)
+                console.error('Ошибка загрузки расписания:', error);
+                commit('SET_ERROR', error.message);
             } finally {
-              commit('SET_LOADING', false)
+                commit('SET_LOADING', false);
             }
-          },
+        },
 
         setCurrentWeekType({ commit }, weekType) {
             commit('SET_CURRENT_WEEK_TYPE', weekType);
@@ -382,7 +466,11 @@ export default createStore({
         canNavigateNext: state => state.currentWeekOffset < 2,
         currentWeekType: state => state.currentWeekType,
         currentWeekSchedule: state => state.weeksData[state.currentWeekType] || {},
+        currentWeekNumber: state => state.currentWeekNumber,
         currentGroup: state => state.currentGroup,
+        searchType: state => state.searchType,
+        currentTeacher: state => state.currentTeacher,
+        currentRoom: state => state.currentRoom,
         getWeekTypeByOffset: (state) => (offset) => {
             // Определяем тип недели по абсолютному смещению
             const absoluteOffset = Math.abs(offset);
