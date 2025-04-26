@@ -1,31 +1,31 @@
 const express = require('express');
-const teacherRouter = express.Router();
+const roomRouter = express.Router();
 const axios = require('axios');
-const TeacherService = require('../services/teachers');
+const RoomService = require('../services/rooms');
 require("dotenv").config();
 
 const username = process.env.API_LOGIN;
 const password = process.env.API_PASSWORD;
 const token = process.env.API_TOKEN;
-const teacherService = new TeacherService();
+const roomService = new RoomService();
 
-teacherRouter.get('/:lastname', async (req, res) => {
-    const lastname = req.params.lastname;
+roomRouter.get('/:name', async (req, res) => {
+    const name = req.params.name;
     try {
-        const teacherId = (await teacherService.findByName(lastname)).dataValues.id.toString().padStart(9, '0');
-        const schedule = (await axios.get(`https://university.kubsau.ru/kubsau/hs/csData/GetByTeacher/${teacherId}`, {
+        const roomId = (await roomService.findByName(name)).dataValues.id.toString().padStart(9, '0');
+        
+        const schedule = (await axios.get(`https://university.kubsau.ru/kubsau/hs/csData/GetByRoom/${roomId}`, {
             headers: {
                 'Token': token,
                 'Authorization': `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
             }
         })).data;
-        
+
         const newSchedule = {
-            type: "teacher",
+            type: "room",
             name: schedule.name,
             lessons: []
         };
-
         schedule.weeks.forEach(week => {
             week.days.forEach(day => {
                 day.classes.forEach(classObj => {
@@ -34,24 +34,31 @@ teacherRouter.get('/:lastname', async (req, res) => {
                             numberWeek: week.number,
                             numberDay: day.number,
                             number: classObj.number,
-                            name: classObj.lessons[0]?.name,
+                            name: classObj.lessons[0].name,
                             type: classObj.lessons[0].type == 'lec' ? 'lection' : "seminar",
-                            room: classObj.lessons[0]?.rooms[0]?.name,
                             details: []
-                        };
-                        classObj.lessons[0]?.rooms[0].groups.forEach(group => {
-                            const [ nameGroup, subgroup ] = group.name.split('/');
-                            const newGroup = {
-                                group: nameGroup,
-                                subgroup: subgroup || ""
+                        }
+                        classObj.lessons[0]?.teachers.forEach(teacher => {
+                            const newTeacher = {
+                                name: teacher?.name,
+                                groups: []
                             };
-                            lesson.details.push(newGroup)
+                            teacher.groups.forEach(group => {
+                                const [ nameGroup, subgroup ] = group.name.split('/');
+                                const newGroup = {
+                                    group: nameGroup,
+                                    subgroup: subgroup || ""
+                                };
+                                newTeacher.groups.push(newGroup);
+                            })
+                            lesson.details.push(newTeacher)
                         });
                         newSchedule.lessons.push(lesson);
                     }
                 })
             })
         });
+        
         res.json(newSchedule);
     } catch (error) {
         console.error('Ошибка: ', error.message);
@@ -63,4 +70,4 @@ teacherRouter.get('/:lastname', async (req, res) => {
     }
 });
 
-module.exports = teacherRouter;
+module.exports = roomRouter;
