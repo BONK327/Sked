@@ -1,3 +1,4 @@
+const { Op } = require("sequelize");
 const TeacherModel = require('../models/teacherModel');
 
 class TeacherRepository {
@@ -14,7 +15,13 @@ class TeacherRepository {
     }
 
     async findByName(shortname) {
-        return this.model.findOne({ where: { shortname } });
+        return this.model.findOne({
+            where: {
+                shortname: {
+                    [Op.like]: `${shortname}%`
+                }
+            }
+        });
     }
 
     async bulkCreate(teachersData) {
