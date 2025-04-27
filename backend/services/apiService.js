@@ -19,7 +19,7 @@ class ApiService {
             const response = await this.axios.get(`/GetBy${type}/${paddedId}`);
             return response.data;
         } catch (error) {
-            throw ApiError.BadGateway('Failed to fetch schedule from external API');
+            throw 'Failed to fetch schedule from external API';
         }
     }
 }

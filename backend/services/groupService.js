@@ -1,12 +1,15 @@
 const GroupRepository = require('../repositories/groupRepository');
+const LessonRepository = require('../repositories/lessonRepository');
 const ApiService = require('./apiService');
 
 const groupRepository = new GroupRepository();
+const lessonRepository = new LessonRepository();
 const apiService = new ApiService();
 
 class GroupService {
     constructor() {
         this.groupRepository = groupRepository;
+        this.lessonRepository = lessonRepository;
         this.apiService = apiService;
     }
 
@@ -15,45 +18,28 @@ class GroupService {
         if (!group) {
             throw ApiError.NotFound('Group not found');
         }
-        const schedule = await this.apiService.fetchSchedule("Group", group.id);
-        return this.formatSchedule(schedule);
-    }
-
-    formatSchedule(schedule) {
-        return {
-            type: "group",
-            name: schedule.name,
-            lessons: schedule.weeks.flatMap(week => 
-                week.days.flatMap(day => 
-                day.classes
-                    .filter(classObj => classObj.lessons.length > 0)
-                    .map(classObj => this.formatLesson(week, day, classObj))
-                )
-            )
-        };
-    }
-
-    formatLesson(week, day, classObj) {
-        const lesson = classObj.lessons[0];
-        return {
-            numberWeek: week.number,
-            numberDay: day.number,
-            number: classObj.number,
-            name: lesson.name,
-            type: lesson.type === 'lec' ? 'lection' : 'seminar',
-            details: this.formatDetails(lesson)
-        };
-    }
-
-    formatDetails(lesson) {
-        if (lesson.name === "Элективные курсы по физической культуре и спорту") {
-            return [{ name: "", room: "спорткомплекс", subgroup: "" }];
+        const schedule = await this.lessonRepository.findByGroup(group.id)
+        const result = {
+            type: 'group',
+            name: group.name,
+            lessons: schedule.map(lesson => {
+                return {
+                    numberWeek: lesson.number_week,
+                    numberDay: lesson.number_day,
+                    number: lesson.number,
+                    name: lesson.lesson,
+                    type: lesson.type,
+                    details: lesson.lesson_details.map(detail => {
+                        return {
+                            name: detail.teacher,
+                            room: detail.room,
+                            subgroup: detail.subgroup
+                        }
+                    })
+                }
+            })
         }
-        return lesson.teachers.map(teacher => ({
-            name: teacher?.name,
-            room: teacher?.room?.name,
-            subgroup: teacher?.group?.subgroup
-        }));
+        return result;
     }
 }
 

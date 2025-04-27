@@ -23,10 +23,6 @@ const Teacher = sequelize.define("Teacher",
         shortname: {
             type: DataTypes.STRING(24),
             allowNull: false
-        },
-        last_refresh: {
-            type: DataTypes.DATE,
-            defaultValue: DataTypes.NOW
         }
     }, {
         tableName: 'teachers',

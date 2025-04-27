@@ -1,12 +1,15 @@
+const LessonRepository = require('../repositories/lessonRepository');
 const TeacherRepository = require('../repositories/teacherRepository');
 const ApiService = require('./apiService');
 
 const teacherRepository = new TeacherRepository();
+const lessonRepository = new LessonRepository();
 const apiService = new ApiService();
 
 class TeacherService {
     constructor() {
         this.teacherRepository = teacherRepository;
+        this.lessonRepository = lessonRepository;
         this.apiService = apiService;
     }
 
@@ -15,45 +18,28 @@ class TeacherService {
         if (!teacher) {
             throw ApiError.NotFound('Teacher not found');
         }
-        const schedule = await this.apiService.fetchSchedule("Teacher", teacher.id);
-        return this.formatSchedule(schedule);
-    }
-
-    formatSchedule(schedule) {
-        return {
-            type: "teacher",
-            name: schedule.name,
-            lessons: schedule.weeks.flatMap(week => 
-                week.days.flatMap(day => 
-                day.classes
-                    .filter(classObj => classObj.lessons != "null")
-                    .map(classObj => this.formatLesson(week, day, classObj))
-                )
-            )
-        };
-    }
-
-    formatLesson(week, day, classObj) {
-        const lesson = classObj.lessons[0];
-        return {
-            numberWeek: week.number,
-            numberDay: day.number,
-            number: classObj.number,
-            name: lesson.name,
-            type: lesson.type === 'lec' ? 'lection' : 'seminar',
-            room: lesson.rooms[0].name,
-            details: this.formatDetails(lesson.rooms[0].groups)
-        };
-    }
-
-    formatDetails(groups) {
-        return groups.map(group => {
-            const [ name, subgroup ] = group.name.split('/');
-            return {
-                group: name,
-                subgroup: subgroup || ""
-            }
-        });
+        const schedule = await this.lessonRepository.findByTeacher(teacher.id)
+        const result = {
+            type: 'teacher',
+            name: `${teacher.lastname} ${teacher.firstname} ${teacher.middlename}`,
+            lessons: schedule.map(lesson => {
+                return {
+                    numberWeek: lesson.number_week,
+                    numberDay: lesson.number_day,
+                    number: lesson.number,
+                    name: lesson.lesson,
+                    type: lesson.type,
+                    room: lesson.lesson_details[0].room,
+                    details: lesson.lesson_details.map(detail => {
+                        return {
+                            group: detail.group,
+                            subgroup: detail.subgroup
+                        }
+                    })
+                }
+            })
+        }
+        return result;
     }
 }
 
