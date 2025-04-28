@@ -6,7 +6,10 @@
       <span v-else-if="currentRoom">{{ currentRoom }}</span>
     </h1>
     <strong class="name__slash">|</strong>
-    <h2 class="name__week">{{ weekName }}</h2>
+    <h2 class="name__week">
+      {{ weekName }}
+      <span v-if="debugInfo">(Неделя API: {{ apiWeekNumber }}, Смещение: {{ weekOffset }})</span>
+    </h2>
   </section>
 </template>
 
@@ -15,20 +18,28 @@ import { mapGetters } from 'vuex'
 
 export default {
   name: 'GroupInfo',
+  data() {
+    return {
+      debugInfo: false // В продакшене установить в false
+    }
+  },
   computed: {
     ...mapGetters([
-      'currentGroup', 
-      'currentTeacher', 
-      'currentRoom', 
+      'currentGroup',
+      'currentTeacher',
+      'currentRoom',
       'currentWeekNumber',
-      'currentWeekType'
+      'baseWeekNumber',
+      'currentWeekOffset'
     ]),
+    apiWeekNumber() {
+      return this.baseWeekNumber || 'N/A';
+    },
     weekName() {
-      if (this.currentWeekNumber !== null) {
-        return `Неделя ${this.currentWeekNumber}`;
-      }
-      // Резервный вариант, если по какой-то причине номер недели не установлен
-      return this.currentWeekType === 'week1' ? 'Неделя 1' : 'Неделя 2';
+      return `Неделя ${this.currentWeekNumber}`;
+    },
+    weekOffset() {
+      return this.currentWeekOffset || 0;
     }
   }
 }

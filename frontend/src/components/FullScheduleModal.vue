@@ -2,10 +2,11 @@
   <div class="full-schedule-modal" @click.self="closeModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 class="table__title">Расписание на неделю</h2>
+        <h2 class="table__title">Расписание на неделю (Неделя {{ currentWeekNumber }})</h2>
         <button class="close-btn" @click="closeModal">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M18 6L6 18M6 6L18 18" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M18 6L6 18M6 6L18 18" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
           </svg>
         </button>
       </div>
@@ -15,19 +16,23 @@
           <div v-for="(day, dayIndex) in weekDays" :key="dayIndex" class="table">
             <h3 class="table__title">{{ day.fullName }}</h3>
             <div class="table__content">
-              <div
-                  v-for="(row, rowIndex) in getTimeSlotsForDay(dayIndex)"
-                  :key="rowIndex"
-                  class="table__content-row"
-              >
+              <div v-for="(row, rowIndex) in getTimeSlotsForDay(dayIndex)" :key="rowIndex" class="table__content-row">
                 <div class="table__content-row-time" v-html="row.time"></div>
-                <div :class="['table__content-row-color', `table__content-row-color--${getTypeForLesson(dayIndex, row.time)}`]"></div>
+                <div
+                  :class="['table__content-row-color', `table__content-row-color--${getTypeForLesson(dayIndex, row.time)}`]">
+                </div>
                 <div class="table__content-row-lesson">
-                  <span class="table__content-row-lesson--class">{{ getLessonForDay(dayIndex, row.time)?.lesson || '' }}</span>
-                  <span class="table__content-row-lesson--teacher">{{ getLessonForDay(dayIndex, row.time)?.teacher || '' }}</span>
+                  <span class="table__content-row-lesson--class">{{ getLessonName(dayIndex, row.time) }}</span>
+                  <span :class="[
+                    'table__content-row-lesson--details',
+                    'green-text'
+                  ]">{{ getMainDetails(dayIndex, row.time) }}</span>
                 </div>
                 <div class="table__content-row-room">
-                  <span class="table__content-row-room--num">{{ getLessonForDay(dayIndex, row.time)?.room || '' }}</span>
+                  <span :class="[
+                    'table__content-row-room--num',
+
+                  ]">{{ getRoomDetails(dayIndex, row.time) }}</span>
                 </div>
               </div>
             </div>
@@ -75,7 +80,11 @@ export default {
     }
   },
   computed: {
-    ...mapGetters(['currentWeekSchedule']),
+    ...mapGetters([
+      'currentWeekSchedule',
+      'currentWeekNumber',
+      'searchType'
+    ])
   },
   methods: {
     ...mapActions(['fetchFullWeekSchedule']),
@@ -88,93 +97,124 @@ export default {
       return dayIndex === 5 ? saturdayRows : defaultRows
     },
 
-    getLessonForDay(dayIndex, time) {
-  const lesson = this.currentDaySchedule.find(r => r.time === time);
-  if (!lesson) return null;
-  
-  let detailsStr = '';
-  
-  if (this.$store.state.searchType === 'group') {
-    // Формат для групп
-    detailsStr = lesson.teachers 
-      ? lesson.teachers.map(t => {
-          let str = t.name;
-          if (t.subgroup) str += ` (${t.subgroup})`;
-          return str;
-        }).join(', ')
-      : '';
-  } else if (this.$store.state.searchType === 'teacher') {
-    // Формат для преподавателей
-    detailsStr = lesson.details 
-      ? lesson.details.map(d => {
-          let str = d.group;
-          if (d.subgroup) str += ` (${d.subgroup})`;
-          return str;
-        }).join(', ')
-      : '';
-  } else if (this.$store.state.searchType === 'room') {
-    // Формат для аудиторий
-    detailsStr = lesson.details 
-      ? lesson.details.map(d => {
-          let str = d.name;
-          if (d.groups) {
-            const groupsStr = d.groups.map(g => {
-              let groupStr = g.group;
-              if (g.subgroup) groupStr += ` (${g.subgroup})`;
-              return groupStr;
-            }).join(', ');
-            str += ` - ${groupsStr}`;
-          }
-          return str;
-        }).join(', ')
-      : '';
-  }
-  
-  return {
-    ...lesson,
-    details: detailsStr,
-    room: lesson.room || ''
-  };
-},
+    getLessonsForDay(dayIndex) {
+      return this.currentWeekSchedule[dayIndex] || []
+    },
 
-getUniqueRoomsWithSubgroups(teachers) {
-    const roomMap = {};
-    const allSubgroups = new Set();
-    
-    // Сначала собираем все существующие подгруппы
-    teachers.forEach(t => {
-      if (t.subgroup) {
-        allSubgroups.add(t.subgroup);
-      }
-    });
-    
-    // Группируем аудитории по номерам и собираем подгруппы
-    teachers.forEach(t => {
-      if (t.room) {
-        if (!roomMap[t.room]) {
-          roomMap[t.room] = new Set();
-        }
-        if (t.subgroup) {
-          roomMap[t.room].add(t.subgroup);
-        }
-      }
-    });
-    
-    // Формируем итоговую строку
-    return Object.entries(roomMap)
-      .map(([room, subgroups]) => {
-        // Не показываем подгруппы если в аудитории занимаются все подгруппы
-        if (subgroups.size > 0 && subgroups.size !== allSubgroups.size) {
-          return `${room} (подгр. ${Array.from(subgroups).join(', ')})`;
-        }
-        return room;
-      })
-      .join(', ');
-  },
+    getLessonForDay(dayIndex, time) {
+      const lessons = this.getLessonsForDay(dayIndex)
+      return lessons.find(lesson => lesson.time === time) || null
+    },
+
+    getLessonName(dayIndex, time) {
+      const lesson = this.getLessonForDay(dayIndex, time)
+      return lesson?.name || lesson?.lesson || ''
+    },
 
     getTypeForLesson(dayIndex, time) {
-      const lesson = this.getLessonForDay(dayIndex, time);
-      return lesson?.type || 'seminar';
+      const lesson = this.getLessonForDay(dayIndex, time)
+      return lesson?.type || 'seminar'
+    },
+
+    getMainDetails(dayIndex, time) {
+      const lesson = this.getLessonForDay(dayIndex, time)
+      if (!lesson) return ''
+
+      switch (this.searchType) {
+        case 'group':
+          return this.formatTeachersWithSubgroups(lesson.teachers || [])
+        case 'teacher':
+          return this.formatGroupsWithSubgroups(lesson.details || [])
+        case 'room':
+          return this.formatTeachersWithSubgroups(lesson.details || [])
+        default:
+          return ''
+      }
+    },
+
+    getRoomDetails(dayIndex, time) {
+      const lesson = this.getLessonForDay(dayIndex, time)
+      if (!lesson) return ''
+
+      switch (this.searchType) {
+        case 'group':
+          return this.formatRoomsWithSubgroups(lesson.teachers || [])
+        case 'teacher':
+          return lesson.room || ''
+        case 'room':
+          return this.formatGroupsWithSubgroups(
+            lesson.details?.flatMap(d => d.groups || []) || []
+          )
+        default:
+          return ''
+      }
+    },
+
+    formatTeachersWithSubgroups(items) {
+      if (!items || !items.length) return ''
+
+      return items.map(item => {
+        const teacherName = item.name || item.teacher || ''
+        const subgroup = item.subgroup ||
+          (item.groups?.[0]?.subgroup) || ''
+
+        if (!teacherName) return ''
+
+        const nameParts = teacherName.split(' ')
+        const shortName = nameParts[0] + ' ' +
+          (nameParts[1] ? nameParts[1][0] + '.' : '') +
+          (nameParts[2] ? nameParts[2][0] + '.' : '')
+
+        return subgroup ? `${teacherName}(${subgroup})` : teacherName
+      }).filter(Boolean).join(', ')
+    },
+
+    formatGroupsWithSubgroups(groups) {
+      if (!groups) return ''
+
+      if (this.searchType === 'room') {
+        const uniqueGroups = new Set()
+        groups.forEach(g => {
+          if (g.group) {
+            const baseGroup = g.group.split('(')[0]
+            uniqueGroups.add(baseGroup)
+          }
+        })
+        return [...uniqueGroups].join(', ')
+      }
+
+      return groups.map(g => {
+        let str = g.group
+        if (g.subgroup) str += `(${g.subgroup})`
+        return str
+      }).join(', ')
+    },
+
+    formatRoomsWithSubgroups(items) {
+      if (!items) return ''
+      const roomMap = new Map()
+      const allSubgroups = new Set()
+
+      items.forEach(item => {
+        if (item.subgroup) {
+          allSubgroups.add(item.subgroup)
+        }
+      })
+
+      items.forEach(item => {
+        if (item.room) {
+          if (!roomMap.has(item.room)) {
+            roomMap.set(item.room, new Set())
+          }
+          if (item.subgroup) {
+            roomMap.get(item.room).add(item.subgroup)
+          }
+        }
+      })
+
+      return [...roomMap.entries()].map(([room, subgroups]) => {
+        return subgroups.size === allSubgroups.size ? room : `${room}(${[...subgroups].join(',')})`
+      }).join(', ')
     }
   },
   async created() {
@@ -206,7 +246,6 @@ getUniqueRoomsWithSubgroups(teachers) {
   align-items: center
   z-index: 1000
   overflow: auto
-
 
 .modal-content
   background-color: $color-white
@@ -243,7 +282,6 @@ getUniqueRoomsWithSubgroups(teachers) {
     font-size: 1.5rem
     font-weight: 400
     margin: 0
-
 
 .modal-body
   flex: 1
@@ -316,7 +354,7 @@ getUniqueRoomsWithSubgroups(teachers) {
         padding: 0.5rem 0.8rem
         flex: 1
         &--class,
-        &--teacher
+        &--details
           white-space: normal
           word-break: break-word
           display: inline-block
@@ -329,8 +367,6 @@ getUniqueRoomsWithSubgroups(teachers) {
         &--class
           line-height: 1rem
           margin-bottom: 0.2rem
-        &--teacher
-          color: $color-light-green
       &-room
         align-self: flex-start
         text-align: center
@@ -347,4 +383,7 @@ getUniqueRoomsWithSubgroups(teachers) {
           font-size: 0.8rem
         &--num
           letter-spacing: -0.03rem
+
+.green-text
+  color: $color-light-green
 </style>

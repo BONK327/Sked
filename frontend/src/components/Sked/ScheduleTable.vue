@@ -89,6 +89,14 @@ export default {
           this.swiperInstance.slideTo(newIndex);
         }
       }
+    },
+    currentWeekType() {
+      // При изменении типа недели пересоздаем swiper
+      this.$nextTick(() => {
+        if (this.swiperInstance) {
+          this.swiperInstance.update();
+        }
+      });
     }
   },
   created() {

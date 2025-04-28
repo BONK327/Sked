@@ -2,10 +2,23 @@ import { createStore } from 'vuex'
 
 const localhost = "127.0.0.1:3000";
 // В хранилище добавляем:
-function getWeekNumberByDate(date = new Date()) {
-    const startOfYear = new Date(date.getFullYear(), 0, 1);
-    const days = Math.floor((date - startOfYear) / (24 * 60 * 60 * 1000));
-    return Math.floor(days / 7) % 2 + 1; // 1 или 2
+function getAcademicWeekNumber(date = new Date()) {
+    // Учебный год начинается 1 сентября
+    const startOfYear = new Date(date.getFullYear(), 8, 1); // 8 = сентябрь
+    
+    // Если текущая дата до 1 сентября, берем предыдущий учебный год
+    if (date < startOfYear) {
+        startOfYear.setFullYear(startOfYear.getFullYear() - 1);
+    }
+    
+    // Разница в миллисекундах
+    const diffTime = date - startOfYear;
+    
+    // Разница в неделях
+    const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
+    
+    // Номер недели (1 или 2)
+    return ((diffWeeks + 1) % 2) + 1;
 }
 export default createStore({
     state: {
@@ -42,6 +55,19 @@ export default createStore({
 
     },
     mutations: {
+        UPDATE_WEEK_OFFSET_AND_NUMBER(state, { offset, weekNumber }) {
+            state.currentWeekOffset = offset;
+            state.currentWeekNumber = weekNumber;
+            state.currentWeekType = `week${weekNumber}`;
+          },
+        INIT_WEEK_NUMBER(state) {
+            // Устанавливаем неделю по умолчанию (1), 
+            // но реальный номер будет установлен при загрузке расписания
+            state.currentWeekNumber = 1;
+            state.currentWeekType = 'week1';
+            localStorage.setItem('currentWeekNumber', '1');
+        },
+    
         SET_CURRENT_GROUP(state, group) {
             state.currentGroup = group;
             state.searchType = 'group';
@@ -236,10 +262,22 @@ export default createStore({
                 }
             }
         },
-        changeWeek({ commit, dispatch }, offset) {
-            commit('SET_WEEK_OFFSET', offset)
-            dispatch('updateDays')
-        },
+        changeWeek({ commit, dispatch, state }, offset) {
+            // Вычисляем новый номер недели
+            const baseWeek = state.baseWeekNumber || 1;
+            let newWeekNumber = baseWeek;
+            if (offset !== 0) {
+              newWeekNumber = (baseWeek + offset) % 2;
+              newWeekNumber = newWeekNumber === 0 ? 2 : newWeekNumber;
+            }
+            
+            commit('UPDATE_WEEK_OFFSET_AND_NUMBER', {
+              offset,
+              weekNumber: newWeekNumber
+            });
+            
+            dispatch('updateDays');
+          },
 
         updateWeekNumber({ commit, state }, offset) {
             const baseWeek = state.baseWeekNumber || 1;
@@ -318,9 +356,9 @@ export default createStore({
             try {
                 commit('SET_LOADING', true);
                 commit('CLEAR_SCHEDULE');
-
+        
                 let endpoint, query;
-
+        
                 switch (state.searchType) {
                     case 'group':
                         if (!state.currentGroup) return;
@@ -340,28 +378,31 @@ export default createStore({
                     default:
                         return;
                 }
-
+        
                 const response = await fetch(`http://${localhost}/api/${endpoint}/${query}`);
                 if (!response.ok) throw new Error('Ошибка загрузки расписания');
-
+        
                 const scheduleData = await response.json();
-
-                if (scheduleData.lessons?.length > 0) {
-                    const baseWeek = scheduleData.lessons[0].numberWeek;
-                    commit('SET_BASE_WEEK_NUMBER', baseWeek);
-                    
-                    // Не перезаписываем текущую неделю, только если она не установлена
-                    if (!state.currentWeekNumber) {
-                      commit('SET_CURRENT_WEEK_NUMBER', baseWeek);
-                    }
-                    
-                    commit('SET_CURRENT_WEEK_TYPE', `week${state.currentWeekNumber}`);
-                  }
-
-
-
-
-
+                console.log('Получены данные расписания:', scheduleData);
+        
+                // Определяем номер текущей недели математически
+                const calculatedWeek = getAcademicWeekNumber();
+                console.log('Математически рассчитанная неделя:', calculatedWeek);
+        
+                // Проверяем, есть ли такая неделя в данных API
+                const weeksInAPI = [...new Set(scheduleData.lessons.map(l => l.numberWeek))];
+                console.log('Недели в API:', weeksInAPI);
+        
+                // Определяем базовую неделю (используем рассчитанную, если она есть в API)
+                const baseWeek = weeksInAPI.includes(calculatedWeek) ? calculatedWeek : 
+                                 weeksInAPI.includes(1) ? 1 : 2;
+        
+                console.log('Установлена базовая неделя:', baseWeek);
+                commit('SET_BASE_WEEK_NUMBER', baseWeek);
+                commit('SET_CURRENT_WEEK_NUMBER', baseWeek);
+                commit('SET_CURRENT_WEEK_TYPE', `week${baseWeek}`);
+        
+                // Обработка данных расписания
                 const formatLessonTime = (number) => {
                     const times = {
                         1: '08:00<br>09:30',
@@ -376,27 +417,27 @@ export default createStore({
                         14: '13:15<br>14:45',
                         15: '15:00<br>16:30',
                         16: '16:45<br>18:15'
-                    }
-                    return times[number] || ''
-                }
-
+                    };
+                    return times[number] || '';
+                };
+        
                 const transformedData = {
                     week1: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
                     week2: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
-                }
-
+                };
+        
                 scheduleData.lessons.forEach(lesson => {
                     const weekType = `week${lesson.numberWeek}`;
                     const dayIndex = lesson.numberDay - 1;
                     let num = lesson.numberDay === 6 ? lesson.number + 10 : lesson.number;
-
+        
                     const transformedLesson = {
                         time: formatLessonTime(num),
                         type: lesson.type,
                         lesson: lesson.name,
-                        weekNumber: lesson.numberWeek // Сохраняем номер недели из API
+                        weekNumber: lesson.numberWeek
                     };
-
+        
                     if (state.searchType === 'group') {
                         transformedLesson.teachers = lesson.details || [];
                     }
@@ -410,20 +451,20 @@ export default createStore({
                             groups: d.groups || []
                         })) || [];
                     }
-
+        
                     transformedData[weekType][dayIndex].push(transformedLesson);
                 });
-
+        
                 for (const weekType of ['week1', 'week2']) {
                     for (let dayIndex = 0; dayIndex < 6; dayIndex++) {
                         commit('SET_WEEK_SCHEDULE', {
                             weekType,
                             dayIndex,
                             schedule: transformedData[weekType][dayIndex] || []
-                        })
+                        });
                     }
                 }
-
+        
             } catch (error) {
                 console.error('Ошибка загрузки расписания:', error);
                 commit('SET_ERROR', error.message);
@@ -440,6 +481,9 @@ export default createStore({
         },
         updateWeekOffset({ commit }, offset) {
             commit('SET_WEEK_OFFSET', offset)
+        },
+        initWeekNumber({ commit }) {
+            commit('INIT_WEEK_NUMBER');
         },
 
 
@@ -471,6 +515,7 @@ export default createStore({
         searchType: state => state.searchType,
         currentTeacher: state => state.currentTeacher,
         currentRoom: state => state.currentRoom,
+        baseWeekNumber: state => state.baseWeekNumber,
         getWeekTypeByOffset: (state) => (offset) => {
             // Определяем тип недели по абсолютному смещению
             const absoluteOffset = Math.abs(offset);

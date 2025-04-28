@@ -41,9 +41,9 @@ export default {
     const dayNames = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
     const monthNames = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 
-    const weekType = this.$store.getters.getWeekTypeByOffset(0);
-    this.$store.dispatch('setCurrentWeekType', weekType);
-
+    // Инициализируем номер недели
+    this.$store.dispatch('initWeekNumber');
+    
     this.$store.dispatch('fetchFullWeekSchedule', {
       fullDayName: dayNames[today.getDay()],
       date: today.getDate(),
