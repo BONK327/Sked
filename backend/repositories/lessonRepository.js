@@ -1,9 +1,8 @@
 const { Op, where, col, fn } = require('sequelize');
 const LessonModel = require('../models/lessonModel');
-const LessonDetailModel = require('../models/lessonDetailModel');
 const TeacherModel = require('../models/teacherModel');
-const Group = require('../models/groupModel');
-const Room = require('../models/roomModel');
+const GroupModel = require('../models/groupModel');
+const RoomModel = require('../models/roomModel');
 
 class LessonRepository {
     constructor() {
@@ -26,102 +25,69 @@ class LessonRepository {
     }
 
     async find(type, id) {
-        const result = [];
         const lessons = await this.model.findAll({
             attributes: [
-                'id',
                 'number_week',
                 'number_day',
                 'number',
-                'lesson',
+                'name',
                 'type',
+                [col('teacher.id'), 'teacher_id'],
+                [
+                    fn(
+                        'CONCAT',
+                        col('teacher.lastname'),
+                        ' ',
+                        col('teacher.firstname'),
+                        ' ',
+                        col('teacher.middlename')
+                    ),
+                    'teacher_fullname'
+                ],
+                [col('room.id'), 'room_id'],
+                [col('room.name'), 'room_name'],
+                [col('group.id'), 'group_id'],
+                [col('group.name'), 'group_name'],
+                'subgroup'
             ],
             include: [
                 {
-                    model: LessonDetailModel,
-                    as: 'lesson_details',
-                    where: {
-                        [`${type}_id`]: id
-                    },
+                    model: TeacherModel,
+                    as: 'teacher',
+                    attributes: []
+                },
+                {
+                    model: RoomModel,
+                    as: 'room',
+                    attributes: []
+                },
+                {
+                    model: GroupModel,
+                    as: 'group',
                     attributes: []
                 }
             ],
-            group: [
-                'number_week',
-                'number_day',
-                'number'
-            ],
+            where: {
+                [`${type}_id`]: id
+            },
             order: [
                 ['number_week', 'ASC'],
                 ['number_day', 'ASC'],
-                ['number', 'ASC']
+                ['number', 'ASC'],
+                [col('group.name'), 'ASC'],
+                ['subgroup', 'ASC']
             ],
             raw: true
         })
-        for (let lesson of lessons) {
-            result.push({
-                number_week: lesson.number_week,
-                number_day: lesson.number_day,
-                number: lesson.number,
-                lesson: lesson.lesson,
-                type: lesson.type,
-                lesson_details: await LessonDetailModel.findAll({
-                    attributes: [
-                        [
-                            fn(
-                                'CONCAT',
-                                col('teacher.lastname'),
-                                ' ',
-                                col('teacher.firstname'),
-                                ' ',
-                                col('teacher.middlename')
-                            ),
-                            'teacher'
-                        ],
-                        [col('room.name'), 'room'],
-                        [col('group.name'), 'group'],
-                        'subgroup'
-                    ],
-                    where: {
-                        [`${type}_id`]: id,
-                        lesson_id: lesson.id
-                    },
-                    include: [
-                        {
-                            model: TeacherModel,
-                            as: 'teacher',
-                            attributes: []
-                        },
-                        {
-                            model: Group,
-                            as: 'group',
-                            attributes: []
-                        },
-                        {
-                            model: Room,
-                            as: 'room',
-                            attributes: []
-                        },
-                    ],
-                    order: [
-                        ['subgroup', 'ASC']
-                    ],
-                    raw: true
-                })
-            })
-        }
-        return result;
-    }
-
-    async createOne(lessonData) {
-        return (await this.model.create(lessonData)).id;
+        return lessons;
     }
 
     async bulkCreate(lessonsData) {
-        return this.model.bulkCreate(lessonsData, {
-            validate: true,
-            ignoreDuplicates: true,
-        });
+        try {
+            return this.model.bulkCreate(lessonsData);
+        } catch (error) {
+            console.log(error)
+        }
     }
 
     async deleteAll() {

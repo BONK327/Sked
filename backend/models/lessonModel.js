@@ -1,8 +1,10 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
-const LessonDetail = require("./lessonDetailModel");
+const TeacherModel = require("./teacherModel");
+const RoomModel = require("./roomModel");
+const GroupModel = require("./groupModel");
 
-const Lesson = sequelize.define("Lesson",
+const LessonModel = sequelize.define("Lesson",
     {
         id: {
             type: DataTypes.INTEGER.UNSIGNED,
@@ -10,8 +12,20 @@ const Lesson = sequelize.define("Lesson",
             autoIncrement: true,
             allowNull: false
         },
-        lesson: {
-            type: DataTypes.STRING(100),
+        number_week: {
+            type: DataTypes.TINYINT.UNSIGNED,
+            allowNull: false
+        },
+        number_day: {
+            type: DataTypes.TINYINT.UNSIGNED,
+            allowNull: false
+        },
+        number: {
+            type: DataTypes.TINYINT.UNSIGNED,
+            allowNull: false
+        },
+        name: {
+            type: DataTypes.STRING(150),
             allowNull: false
         },
         type: {
@@ -19,17 +33,21 @@ const Lesson = sequelize.define("Lesson",
             allowNull: false,
             defaultValue: 'seminar'
         },
-        number: {
-            type: DataTypes.ENUM('1', '2', '3', '4', '5', '6'),
+        teacher_id: {
+            type: DataTypes.INTEGER.UNSIGNED,
             allowNull: false
         },
-        number_day: {
-            type: DataTypes.ENUM('1', '2', '3', '4', '5', '6'),
+        room_id: {
+            type: DataTypes.INTEGER.UNSIGNED,
             allowNull: false
         },
-        number_week: {
-            type: DataTypes.ENUM('1', '2'),
+        group_id: {
+            type: DataTypes.INTEGER.UNSIGNED,
             allowNull: false
+        },
+        subgroup: {
+            type: DataTypes.TINYINT.UNSIGNED,
+            defaultValue: null
         }
     }, {
         tableName: 'lessons',
@@ -37,9 +55,29 @@ const Lesson = sequelize.define("Lesson",
     }
 )
 
-Lesson.hasMany(LessonDetail, {
-    foreignKey: 'lesson_id',
-    as: 'lesson_details'
-})
+LessonModel.belongsTo(
+    TeacherModel,
+    {
+        foreignKey: "teacher_id",
+        as: "teacher"
+    }
+)
 
-module.exports = Lesson;
+LessonModel.belongsTo(
+    RoomModel,
+    {
+        foreignKey: "room_id",
+        as: "room"
+    }
+)
+
+LessonModel.belongsTo(
+    GroupModel,
+    {
+        foreignKey: "group_id",
+        as: "group"
+    }
+)
+
+
+module.exports = LessonModel;

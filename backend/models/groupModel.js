@@ -1,7 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-const Group = sequelize.define("Group",
+const GroupModel = sequelize.define("Group",
     {
         id: {
             type: DataTypes.INTEGER.UNSIGNED,
@@ -19,4 +19,4 @@ const Group = sequelize.define("Group",
     }
 )
 
-module.exports = Group;
+module.exports = GroupModel;

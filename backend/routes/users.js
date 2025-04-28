@@ -4,7 +4,7 @@ const UserController = require('../controllers/userController');
 const userController = new UserController();
 
 userRouter.post('', async (req, res) => {
-    userController.getAll(req, res);
+    userController.getScheduleByUserAndData(req, res);
 });
 
 module.exports = userRouter;

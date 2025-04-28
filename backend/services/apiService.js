@@ -4,12 +4,12 @@ const config = require('../config/api');
 class ApiService {
     constructor() {
         this.axios = axios.create({
-        baseURL: config.baseUrl,
-        timeout: 5000,
-        headers: {
-            'Token': config.token,
-            'Authorization': `Basic ${Buffer.from(`${config.username}:${config.password}`).toString('base64')}`
-        }
+            baseURL: config.baseUrl,
+            timeout: 10000,
+            headers: {
+                'Token': config.token,
+                'Authorization': `Basic ${Buffer.from(`${config.username}:${config.password}`).toString('base64')}`
+            }
         });
     }
 
@@ -19,7 +19,7 @@ class ApiService {
             const response = await this.axios.get(`/GetBy${type}/${paddedId}`);
             return response.data;
         } catch (error) {
-            throw 'Failed to fetch schedule from external API';
+            console.log(error)
         }
     }
 }

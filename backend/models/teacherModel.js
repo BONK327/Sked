@@ -1,7 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-const Teacher = sequelize.define("Teacher",
+const TeacherModel = sequelize.define("Teacher",
     {
         id: {
             type: DataTypes.INTEGER.UNSIGNED,
@@ -30,4 +30,4 @@ const Teacher = sequelize.define("Teacher",
     }
 )
 
-module.exports = Teacher;
+module.exports = TeacherModel;

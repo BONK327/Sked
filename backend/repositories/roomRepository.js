@@ -6,7 +6,7 @@ class RoomRepository {
     }
 
     async findAll() {
-        return this.model.findAll({ order: [['name', 'ASC']] });
+        return this.model.findAll();
     }
 
     async findById(id) {
