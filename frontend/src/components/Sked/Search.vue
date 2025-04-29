@@ -33,51 +33,151 @@ export default {
   methods: {
     ...mapActions(['searchSchedule']),
 
-    determineSearchType(query) {
-      query = query.trim();
+    // Форматируем группу (делаем буквы перед цифрами заглавными)
+    formatGroupName(group) {
+      if (!group) return group;
+      // Находим индекс первой цифры
+      const firstDigitIndex = group.search(/\d/);
+      if (firstDigitIndex === -1) return group.toUpperCase();
 
-      // Проверка на аудиторию (начинается с цифр, затем буквы)
-      if (/^\d+[а-яё]+$/i.test(query)) {
-        return 'room';
-      }
-
-      // Проверка на группу (начинается с букв, затем цифры)
-      if (/^[а-яё]+\d+$/i.test(query)) {
-        return 'group';
-      }
-
-      // Если не подошло ни то ни другое - считаем преподавателем
-      return 'teacher';
+      const letters = group.slice(0, firstDigitIndex).toUpperCase();
+      const numbers = group.slice(firstDigitIndex);
+      return letters + numbers;
     },
 
-    validateInput(query) {
-      // Проверка на группу (буквы + цифры)
-      if (/^[А-ЯЁа-яё]{2,}\d+$/.test(query)) return 'group';
+    // Проверка стандартных аудиторий (цифры+буквы)
+  isStandardRoom(query) {
+    return /^\d+[а-яё]+$/i.test(query); // Например: 229гл, 704гл
+  },
 
-      // Проверка на аудиторию (цифры + буквы)
-      if (/^\d+[А-ЯЁа-яё]+$/.test(query)) return 'room';
+  // Проверка аудиторий с пробелом (цифры пробел буквы)
+  isRoomWithSpace(query) {
+    return /^\d+[а-яё]?\s[а-яё]+$/i.test(query); // Например: 130а зоо, 459а мх
+  },
 
-      // Проверка на преподавателя (только буквы и дефисы)
-      if (/^[А-ЯЁа-яё\s-]+$/.test(query)) return 'teacher';
+  // Проверка специальных аудиторий (точное совпадение)
+  isSpecialRoom(query) {
+    const specialRooms = [
+      '129 1общ',
+      'бокс мтп', 'бокс пм', 'бокс тр',
+      'спортивный комплекс', 'учхоз'
+    ];
+    return specialRooms.includes(query.toLowerCase());
+  },
 
-      return null;
-    },
-
-    handleSearch() {
-      const query = this.searchInput.trim();
-      if (!query) return;
-
-      const type = this.validateInput(query);
-
-      if (!type) {
-        this.errorMessage = 'Введите: группу (ПИ2303), преподавателя (Иванов) или аудиторию (405эк)';
-        setTimeout(() => this.errorMessage = '', 3000);
-        return;
-      }
-
-      this.errorMessage = '';
-      this.searchSchedule({ type, query });
+  // Форматирование имени преподавателя для API (убираем точки)
+  formatTeacherForApi(name) {
+    if (!name) return '';
+    
+    // Удаляем точки и лишние пробелы
+    const cleaned = name.replace(/\./g, '').replace(/\s+/g, ' ').trim();
+    const parts = cleaned.split(' ');
+    
+    let result = parts[0]; // Фамилия
+    
+    // Добавляем первую букву имени
+    if (parts.length > 1) {
+      result += `_${parts[1][0]}`;
     }
+    
+    // Добавляем первую букву отчества
+    if (parts.length > 2) {
+      result += `_${parts[2][0]}`;
+    }
+    
+    return result;
+  },
+
+  // Форматирование для отображения: "иванов иван" → "Иванов И."
+  formatTeacherForDisplay(name) {
+    if (!name) return '';
+    
+    const parts = name.replace(/\./g, '').replace(/\s+/g, ' ').trim().split(' ');
+    
+    // Фамилия с большой буквы
+    let result = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
+    
+    // Инициал имени
+    if (parts.length > 1) {
+      result +=  `${parts[1][0].toUpperCase()}.`;
+    }
+    
+    // Инициал отчества
+    if (parts.length > 2) {
+      result +=  `${parts[2][0].toUpperCase()}.`;
+    }
+    
+    return result;
+  },
+
+  // Основное определение типа поиска
+  determineSearchType(query) {
+    query = query.trim();
+    
+    // 1. Специальные аудитории
+    if (this.isSpecialRoom(query)) return 'room';
+    
+    // 2. Аудитории с пробелом
+    if (this.isRoomWithSpace(query)) return 'room';
+    
+    // 3. Стандартные аудитории
+    if (this.isStandardRoom(query)) return 'room';
+    
+    // 4. Группы (буквы + цифры)
+    if (/^[а-яё]+\d+$/i.test(query)) return 'group';
+    
+    // 5. Всё остальное - преподаватель
+    return 'teacher';
+  },
+
+  // Валидация ввода
+  validateInput(query) {
+    query = query.trim();
+    if (!query) return null;
+
+    const type = this.determineSearchType(query);
+    
+    // Разрешаем точки для преподавателей
+    if (type === 'teacher' && !/^[а-яё\s\-\.]+$/i.test(query)) {
+      return null;
+    }
+    
+    return type;
+  },
+
+  handleSearch() {
+    const query = this.searchInput.trim();
+    if (!query) return;
+
+    const type = this.validateInput(query);
+
+    if (!type) {
+      this.errorMessage = 'Введите: группу (ПИ2303), преподавателя (Иванов) или аудиторию (405эк)';
+      setTimeout(() => this.errorMessage = '', 3000);
+      return;
+    }
+
+    let searchQuery = query;
+    
+    if (type === 'group') {
+      const firstDigit = query.search(/\d/);
+      searchQuery = firstDigit === -1 
+        ? query.toUpperCase() 
+        : query.slice(0, firstDigit).toUpperCase() + query.slice(firstDigit);
+    }
+    // Обработка преподавателей
+    else if (type === 'teacher') {
+      this.searchSchedule({
+        type,
+        query: this.formatTeacherForApi(query), // Для API
+        displayQuery: this.formatTeacherForDisplay(query) // Для отображения
+      });
+      return;
+    }
+
+    this.errorMessage = '';
+    this.searchSchedule({ type, query });
+  }
   }
 }
 </script>

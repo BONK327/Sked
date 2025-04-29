@@ -1,7 +1,7 @@
 const { DataTypes } = require("sequelize");
-const sequelize = require("../db.js");
+const sequelize = require("../config/database");
 
-const Room = sequelize.define("Room",
+const RoomModel = sequelize.define("Room",
     {
         id: {
             type: DataTypes.INTEGER.UNSIGNED,
@@ -19,4 +19,4 @@ const Room = sequelize.define("Room",
     }
 )
 
-module.exports = Room;
+module.exports = RoomModel;

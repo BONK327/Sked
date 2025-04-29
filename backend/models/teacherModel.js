@@ -1,7 +1,7 @@
 const { DataTypes } = require("sequelize");
-const sequelize = require("../db.js");
+const sequelize = require("../config/database");
 
-const Teacher = sequelize.define("Teacher",
+const TeacherModel = sequelize.define("Teacher",
     {
         id: {
             type: DataTypes.INTEGER.UNSIGNED,
@@ -19,6 +19,10 @@ const Teacher = sequelize.define("Teacher",
         middlename: {
             type: DataTypes.STRING(20),
             allowNull: true
+        },
+        shortname: {
+            type: DataTypes.STRING(24),
+            allowNull: false
         }
     }, {
         tableName: 'teachers',
@@ -26,4 +30,4 @@ const Teacher = sequelize.define("Teacher",
     }
 )
 
-module.exports = Teacher;
+module.exports = TeacherModel;

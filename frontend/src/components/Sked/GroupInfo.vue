@@ -1,8 +1,8 @@
 <template>
   <section class="name">
     <h1 class="name__title">
-      <span v-if="currentGroup">{{ currentGroup }}</span>
-      <span v-else-if="currentTeacher">{{ currentTeacher }}</span>
+      <span v-if="currentGroup">{{ formattedGroupName }}</span>
+      <span v-else-if="currentTeacher">{{ formattedTeacherName }}</span>
       <span v-else-if="currentRoom">{{ currentRoom }}</span>
     </h1>
     <strong class="name__slash">|</strong>
@@ -20,7 +20,7 @@ export default {
   name: 'GroupInfo',
   data() {
     return {
-      debugInfo: false // В продакшене установить в false
+      debugInfo: false
     }
   },
   computed: {
@@ -36,10 +36,38 @@ export default {
       return this.baseWeekNumber || 'N/A';
     },
     weekName() {
-      return `Неделя ${this.currentWeekNumber}`;
+      return ` Неделя ${this.currentWeekNumber}`;
     },
     weekOffset() {
       return this.currentWeekOffset || 0;
+    },
+    formattedTeacherName() {
+      if (!this.currentTeacher) return '';
+      const parts = this.currentTeacher.split('_');
+      let formatted = this.capitalizeFirstLetter(parts[0]);
+      if (parts.length > 1 && parts[1]) {
+        formatted += ` ${this.capitalizeFirstLetter(parts[1])}.`;
+      }
+      if (parts.length > 2 && parts[2]) {
+        formatted += ` ${this.capitalizeFirstLetter(parts[2])}.`;
+      }
+      return formatted;
+    },
+    formattedGroupName() {
+      if (!this.currentGroup) return '';
+      // Форматируем группу (ПИ2303 вместо пи2303)
+      const firstDigitIndex = this.currentGroup.search(/\d/);
+      if (firstDigitIndex === -1) return this.currentGroup.toUpperCase();
+      
+      const letters = this.currentGroup.slice(0, firstDigitIndex).toUpperCase();
+      const numbers = this.currentGroup.slice(firstDigitIndex);
+      return letters + numbers;
+    }
+  },
+  methods: {
+    capitalizeFirstLetter(str) {
+      if (!str) return '';
+      return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
     }
   }
 }

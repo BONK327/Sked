@@ -5,18 +5,18 @@ const localhost = "127.0.0.1:3000";
 function getAcademicWeekNumber(date = new Date()) {
     // Учебный год начинается 1 сентября
     const startOfYear = new Date(date.getFullYear(), 8, 1); // 8 = сентябрь
-    
+
     // Если текущая дата до 1 сентября, берем предыдущий учебный год
     if (date < startOfYear) {
         startOfYear.setFullYear(startOfYear.getFullYear() - 1);
     }
-    
+
     // Разница в миллисекундах
     const diffTime = date - startOfYear;
-    
+
     // Разница в неделях
     const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
-    
+
     // Номер недели (1 или 2)
     return ((diffWeeks + 1) % 2) + 1;
 }
@@ -36,7 +36,7 @@ export default createStore({
         },
         currentWeekOffset: 0,
         currentWeekType: 'week1',
-        
+
         currentWeekNumber: parseInt(localStorage.getItem('currentWeekNumber')) || 1,
         baseWeekNumber: null,
         weekDays: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
@@ -59,7 +59,7 @@ export default createStore({
             state.currentWeekOffset = offset;
             state.currentWeekNumber = weekNumber;
             state.currentWeekType = `week${weekNumber}`;
-          },
+        },
         INIT_WEEK_NUMBER(state) {
             // Устанавливаем неделю по умолчанию (1), 
             // но реальный номер будет установлен при загрузке расписания
@@ -67,31 +67,14 @@ export default createStore({
             state.currentWeekType = 'week1';
             localStorage.setItem('currentWeekNumber', '1');
         },
-    
-        SET_CURRENT_GROUP(state, group) {
-            state.currentGroup = group;
-            state.searchType = 'group';
-            localStorage.setItem('currentGroup', group);
-        },
-        SET_CURRENT_TEACHER(state, teacher) {
-            state.currentTeacher = teacher;
+        SET_CURRENT_TEACHER(state, payload) {
+            state.currentTeacher = payload.displayQuery || payload;
             state.searchType = 'teacher';
-        },
-        SET_CURRENT_ROOM(state, room) {
-            state.currentRoom = room;
-            state.searchType = 'room';
-        },
+          },
         CLEAR_SEARCH(state) {
             state.currentGroup = null;
             state.currentTeacher = null;
             state.currentRoom = null;
-        },
-        CLEAR_SCHEDULE(state) {
-            state.weeksData = {
-                week1: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
-                week2: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
-            };
-
         },
         ADD_NOTE(state, note) {
             state.notes.push(note)
@@ -153,10 +136,10 @@ export default createStore({
         SET_CURRENT_WEEK_NUMBER(state, number) {
             state.currentWeekNumber = number;
             localStorage.setItem('currentWeekNumber', number.toString());
-          },
-          SET_BASE_WEEK_NUMBER(state, number) {
+        },
+        SET_BASE_WEEK_NUMBER(state, number) {
             state.baseWeekNumber = number;
-          },
+        },
         SET_WEEK_SCHEDULE(state, { weekType, dayIndex, schedule }) {
             state.weeksData[weekType][dayIndex] = schedule
         },
@@ -185,6 +168,8 @@ export default createStore({
                 week2: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
             }
         },
+        
+
 
     },
     actions: {
@@ -267,17 +252,17 @@ export default createStore({
             const baseWeek = state.baseWeekNumber || 1;
             let newWeekNumber = baseWeek;
             if (offset !== 0) {
-              newWeekNumber = (baseWeek + offset) % 2;
-              newWeekNumber = newWeekNumber === 0 ? 2 : newWeekNumber;
+                newWeekNumber = (baseWeek + offset) % 2;
+                newWeekNumber = newWeekNumber === 0 ? 2 : newWeekNumber;
             }
-            
+
             commit('UPDATE_WEEK_OFFSET_AND_NUMBER', {
-              offset,
-              weekNumber: newWeekNumber
+                offset,
+                weekNumber: newWeekNumber
             });
-            
+
             dispatch('updateDays');
-          },
+        },
 
         updateWeekNumber({ commit, state }, offset) {
             const baseWeek = state.baseWeekNumber || 1;
@@ -285,7 +270,7 @@ export default createStore({
             // Каждое изменение offset на 1 - это смена недели (1<->2)
             const newWeekNumber = ((baseWeek - 1 + offset) % 2 + 2) % 2 + 1;
             commit('SET_CURRENT_WEEK_NUMBER', newWeekNumber);
-          },
+        },
 
         selectDay({ commit, state }, index) {
             commit('SET_SELECTED_DAY_INDEX', index)
@@ -356,9 +341,9 @@ export default createStore({
             try {
                 commit('SET_LOADING', true);
                 commit('CLEAR_SCHEDULE');
-        
+
                 let endpoint, query;
-        
+
                 switch (state.searchType) {
                     case 'group':
                         if (!state.currentGroup) return;
@@ -378,30 +363,30 @@ export default createStore({
                     default:
                         return;
                 }
-        
+
                 const response = await fetch(`http://${localhost}/api/${endpoint}/${query}`);
                 if (!response.ok) throw new Error('Ошибка загрузки расписания');
-        
+
                 const scheduleData = await response.json();
                 console.log('Получены данные расписания:', scheduleData);
-        
+
                 // Определяем номер текущей недели математически
                 const calculatedWeek = getAcademicWeekNumber();
                 console.log('Математически рассчитанная неделя:', calculatedWeek);
-        
+
                 // Проверяем, есть ли такая неделя в данных API
                 const weeksInAPI = [...new Set(scheduleData.lessons.map(l => l.numberWeek))];
                 console.log('Недели в API:', weeksInAPI);
-        
+
                 // Определяем базовую неделю (используем рассчитанную, если она есть в API)
-                const baseWeek = weeksInAPI.includes(calculatedWeek) ? calculatedWeek : 
-                                 weeksInAPI.includes(1) ? 1 : 2;
-        
+                const baseWeek = weeksInAPI.includes(calculatedWeek) ? calculatedWeek :
+                    weeksInAPI.includes(1) ? 1 : 2;
+
                 console.log('Установлена базовая неделя:', baseWeek);
                 commit('SET_BASE_WEEK_NUMBER', baseWeek);
                 commit('SET_CURRENT_WEEK_NUMBER', baseWeek);
                 commit('SET_CURRENT_WEEK_TYPE', `week${baseWeek}`);
-        
+
                 // Обработка данных расписания
                 const formatLessonTime = (number) => {
                     const times = {
@@ -420,24 +405,24 @@ export default createStore({
                     };
                     return times[number] || '';
                 };
-        
+
                 const transformedData = {
                     week1: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
                     week2: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
                 };
-        
+
                 scheduleData.lessons.forEach(lesson => {
                     const weekType = `week${lesson.numberWeek}`;
                     const dayIndex = lesson.numberDay - 1;
                     let num = lesson.numberDay === 6 ? lesson.number + 10 : lesson.number;
-        
+
                     const transformedLesson = {
                         time: formatLessonTime(num),
                         type: lesson.type,
                         lesson: lesson.name,
                         weekNumber: lesson.numberWeek
                     };
-        
+
                     if (state.searchType === 'group') {
                         transformedLesson.teachers = lesson.details || [];
                     }
@@ -451,10 +436,10 @@ export default createStore({
                             groups: d.groups || []
                         })) || [];
                     }
-        
+
                     transformedData[weekType][dayIndex].push(transformedLesson);
                 });
-        
+
                 for (const weekType of ['week1', 'week2']) {
                     for (let dayIndex = 0; dayIndex < 6; dayIndex++) {
                         commit('SET_WEEK_SCHEDULE', {
@@ -464,7 +449,7 @@ export default createStore({
                         });
                     }
                 }
-        
+
             } catch (error) {
                 console.error('Ошибка загрузки расписания:', error);
                 commit('SET_ERROR', error.message);

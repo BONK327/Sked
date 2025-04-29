@@ -75,22 +75,11 @@ export default {
     handleDayClick(index) {
       const clickedDate = new Date(this.days[index].originalDate);
       this.selectedDate = clickedDate;
-      
-      // Определяем смещение недели для выбранной даты
-      const today = new Date();
-      const diffTime = clickedDate - today;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      const diffWeeks = Math.floor(diffDays / 7);
-      
-      // Ограничиваем смещение от -2 до 2 недель
-      this.weekOffset = Math.max(-2, Math.min(2, diffWeeks));
-      
-      // Обновляем номер недели
-      this.updateWeekNumber();
-      
-      // Обновляем дни
-      this.updateDays();
 
+      // Не пересчитываем diffWeeks и не меняем weekOffset
+      // Просто используем текущий weekOffset, чтобы оставить выбранную неделю
+
+      // Обновляем выбранный день
       this.setSelectedDay({
         fullDayName: this.fullDayNames[index],
         date: clickedDate.getDate(),
@@ -98,6 +87,10 @@ export default {
         originalDate: clickedDate,
         dayIndex: index
       });
+
+      // Можно дополнительно обновить отображение, если нужно
+      this.updateWeekNumber();
+      this.updateDays();
     },
 
     isSameDay(date1, date2) {
@@ -164,21 +157,21 @@ export default {
     },
 
     prevWeek() {
-        if (this.weekOffset > -2) {
-            this.weekOffset--;
-            this.updateWeekNumber();
-            this.updateDays();
-        }
+      if (this.weekOffset > -2) {
+        this.weekOffset--;
+        this.updateWeekNumber();
+        this.updateDays();
+      }
     },
-    
+
     nextWeek() {
-        if (this.weekOffset < 2) {
-            this.weekOffset++;
-            this.updateWeekNumber();
-            this.updateDays();
-        }
+      if (this.weekOffset < 2) {
+        this.weekOffset++;
+        this.updateWeekNumber();
+        this.updateDays();
+      }
     },
-    
+
     updateWeekNumber() {
       const baseWeek = this.$store.state.baseWeekNumber;
       if (baseWeek) {
@@ -188,13 +181,13 @@ export default {
           newWeekNumber = (baseWeek + this.weekOffset) % 2;
           newWeekNumber = newWeekNumber === 0 ? 2 : newWeekNumber;
         }
-        
+
         console.log('Updating week number:', {
           baseWeek,
           offset: this.weekOffset,
           newWeekNumber
         });
-        
+
         this.$store.commit('SET_CURRENT_WEEK_NUMBER', newWeekNumber);
         this.$store.commit('SET_CURRENT_WEEK_TYPE', `week${newWeekNumber}`);
       }
