@@ -278,7 +278,7 @@ class ConverterSchedule {
                         numberWeek: element.numberWeek,
                         numberDay: element.numberDay,
                         number: element.number,
-                        lesson: element.name,
+                        name: element.name,
                         type: element.type,
                         details: [
                             {
@@ -321,7 +321,7 @@ class ConverterSchedule {
                         numberWeek: element.numberWeek,
                         numberDay: element.numberDay,
                         number: element.number,
-                        lesson: element.name,
+                        name: element.name,
                         type: element.type,
                         room: element.room.name,
                         details: [
@@ -363,7 +363,7 @@ class ConverterSchedule {
                         numberWeek: element.numberWeek,
                         numberDay: element.numberDay,
                         number: element.number,
-                        lesson: element.name,
+                        name: element.name,
                         type: element.type,
                         details: [
                             {

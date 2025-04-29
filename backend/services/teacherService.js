@@ -17,12 +17,29 @@ class TeacherService {
     }
 
     async getTeacherSchedule(shortname) {
-        const teacher = await this.teacherRepository.findByName(shortname);
-        const scheduleDB = await this.lessonRepository.findByTeacher(teacher.id);
-        const scheduleMiddle = this.converterSchedule.convertDBToMiddle(scheduleDB);
-        const schedulePresent = this.converterSchedule.convertMiddleToPresentTeacher(scheduleMiddle);
-        schedulePresent.name = teacher.shortname
-        return schedulePresent;
+        try {
+            const teacher = await this.teacherRepository.findByName(shortname);
+            if (!teacher) {
+                throw {
+                    name: "NotFoundError",
+                    message: `Teacher '${shortname}' not found`
+                }
+            }
+            const scheduleDB = await this.lessonRepository.findByTeacher(teacher.id);
+            const scheduleMiddle = this.converterSchedule.convertDBToMiddle(scheduleDB);
+            const schedulePresent = this.converterSchedule.convertMiddleToPresentTeacher(scheduleMiddle);
+            schedulePresent.name = teacher.shortname
+            return schedulePresent;
+        } catch (error) {
+            if (error.name == "NotFoundError") {
+                throw error
+            } else {
+                throw {
+                    name: "DatabaseError",
+                    message: "Not database connection"
+                };  
+            }
+        }
     }
 }
 

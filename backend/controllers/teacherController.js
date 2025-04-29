@@ -12,7 +12,17 @@ class TeacherController {
             const schedule = await this.teacherService.getTeacherSchedule(shortname);
             res.json(schedule);
         } catch (error) {
-            
+            switch (error.name) {
+                case "NotFoundError":
+                    res.status(404).json(error);
+                    break;
+                case "DatabaseError":
+                    res.status(503).json(error);
+                    break;
+                default:
+                    res.status(500).json(error);
+                    break;
+            }
         }
     }
 }

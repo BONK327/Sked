@@ -18,12 +18,29 @@ class GroupService {
     }
 
     async getGroupSchedule(name) {
-        const group = await this.groupRepository.findByName(name);
-        const scheduleDB = await this.lessonRepository.findByGroup(group.id);
-        const scheduleMiddle = this.converterSchedule.convertDBToMiddle(scheduleDB);
-        const schedulePresent = this.converterSchedule.convertMiddleToPresentGroup(scheduleMiddle);
-        schedulePresent.name = group.name
-        return schedulePresent;
+        try {
+            const group = await this.groupRepository.findByName(name);
+            if (!group) {
+                throw {
+                    name: "NotFoundError",
+                    message: `Group '${name}' not found`
+                };
+            }
+            const scheduleDB = await this.lessonRepository.findByGroup(group.id);
+            const scheduleMiddle = this.converterSchedule.convertDBToMiddle(scheduleDB);
+            const schedulePresent = this.converterSchedule.convertMiddleToPresentGroup(scheduleMiddle);
+            schedulePresent.name = group.name
+            return schedulePresent;
+        } catch (error) {
+            if (error.name == "NotFoundError") {
+                throw error
+            } else {
+                throw {
+                    name: "DatabaseError",
+                    message: "Not database connection"
+                };  
+            }
+        }
     }
 }
 
