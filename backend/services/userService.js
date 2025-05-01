@@ -4,12 +4,14 @@ const TeacherRepository = require('../repositories/teacherRepository');
 const LessonRepository = require('../repositories/lessonRepository');
 const UserRepository = require('../repositories/userRepository');
 const ConverterSchedule = require('../utils/convertSchedule');
+const NoteService = require('./noteService');
 
 const groupRepository = new GroupRepository();
 const roomRepository = new RoomRepository();
 const teacherRepository = new TeacherRepository();
 const lessonRepository = new LessonRepository();
 const userRepository = new UserRepository();
+const noteService = new NoteService();
 const convertSchedule = new ConverterSchedule();
 
 
@@ -21,6 +23,7 @@ class UserService {
         this.lessonRepository = lessonRepository;
         this.userRepository = userRepository;
         this.converterSchedule = convertSchedule;
+        this.noteService = noteService;
     }
 
     async getScheduleByUserAndData(userData) {
@@ -34,9 +37,11 @@ class UserService {
         const { type, id } = await this._getTypeAndId(user);
         const schedule = await this._getSchedule(type, id);
         const data = await this._getData();
+        const notes = await this.noteService.findAllNoteByUser(userData.id);
         return {
             schedule: schedule,
-            data: data
+            data: data,
+            notes: notes
         };
     }
 
@@ -46,7 +51,7 @@ class UserService {
         if (!user)
             throw { name: "NotFoundError", message: "User not found" };
         if (userData.type !== "group" && userData.type !== "teacher")
-            throw { name: "IncorrectBodyError", message: "Incorrent form body for change first schedule" }
+            throw { name: "IncorrectBodyError", message: "Incorrect form body for change first schedule" }
         
         const { type, id } = await this._getTypeAndId(user);
         const name = await this._getName(type, id);
@@ -71,7 +76,7 @@ class UserService {
                 throw error;
             }
         }
-        return { message: "Successful change"}
+        return { message: "Successful change" }
     }
 
     async _getTypeAndId(user) {

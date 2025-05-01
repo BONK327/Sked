@@ -11,7 +11,7 @@ class UserController {
             if (!req.body?.id || !req.body?.firstname || !req.body?.username)
                 throw {
                     name: "IncorrectBodyError",
-                    message: "Incorrent form body for get schedule and data"
+                    message: "Incorrect form body for get schedule and data"
                 }
             const user = {
                 id: req.body.id,
@@ -34,7 +34,7 @@ class UserController {
             if (!req.body?.id || !req.body?.type || !req.body?.name)
                 throw {
                     name: "IncorrectBodyError",
-                    message: "Incorrent form body for change first schedule"
+                    message: "Incorrect form body for change first schedule"
                 }
             const user = {
                 id: req.body.id,
@@ -46,7 +46,7 @@ class UserController {
         } catch (error) {
             if (error.name == "IncorrectBodyError") {
                 res.status(400).json(error);
-            } else if (error.name == "UserNotExistError") {
+            } else if (error.name == "NotFoundError") {
                 res.status(404).json(error);
             } else {
                 res.status(500).json(error);
