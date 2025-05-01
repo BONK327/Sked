@@ -7,4 +7,8 @@ userRouter.post('', async (req, res) => {
     userController.getScheduleByUserAndData(req, res);
 });
 
+userRouter.post('/change', async (req, res) => {
+    userController.updateUser(req, res)
+})
+
 module.exports = userRouter;
