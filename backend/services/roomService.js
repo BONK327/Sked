@@ -26,10 +26,8 @@ class RoomService {
                 };
             }
             const scheduleDB = await this.lessonRepository.findByRoom(room.id);
-            const scheduleMiddle = this.converterSchedule.convertDBToMiddle(scheduleDB);
-            const schedulePresent = this.converterSchedule.convertMiddleToPresentRoom(scheduleMiddle);
-            schedulePresent.name = room.name
-            return schedulePresent;
+            // const schedulePresent = this.converterSchedule.convertDBToPresentRoom(scheduleDB);
+            return scheduleDB;
         } catch (error) {
             if (error.name == "NotFoundError") {
                 throw error

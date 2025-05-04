@@ -1,4 +1,4 @@
-const { Op, where, col, fn } = require('sequelize');
+const { col, fn } = require('sequelize');
 const LessonModel = require('../models/lessonModel');
 const TeacherModel = require('../models/teacherModel');
 const GroupModel = require('../models/groupModel');
@@ -27,6 +27,7 @@ class LessonRepository {
     async find(type, id) {
         const lessons = await this.model.findAll({
             attributes: [
+                'id',
                 'number_week',
                 'number_day',
                 'number',

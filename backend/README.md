@@ -1,3 +1,20 @@
+<h2>Установка</h2>
+Все действия производить в папке backend! (cd backend)
+<h3>Сервер</h3>
+Перед этим надо запустить БД (schedule_tgbot.sql)
+<pre>
+npm i
+npm run start
+</pre>
+<h3>Телеграм бот</h3>
+<pre>
+python -m venv venv
+venv\Scripts\activate.bat // или source venv/bin/activate
+pip install -r .\requirements.txt
+python main.py
+</pre>
+
+
 <h2>Работа с пользователями</h2>
 <h3>Получение расписания пользователя</h3>
 Когда пользователь заходит в приложение (в первый или нет раз)с<br>

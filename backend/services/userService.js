@@ -26,6 +26,41 @@ class UserService {
         this.noteService = noteService;
     }
 
+    async addUser(userData) {
+        try {
+            const user = await this.userRepository.findById(userData.id);
+            if (!user) {
+                const newUser = await this.userRepository.createOne(userData);
+                console.log(newUser)
+                return { message: "Успех", user: newUser };
+            }
+            else if (user.username !== userData.username && user.firstname !== userData.firstname) {
+                await this.userRepository.updateOne(userData);
+                return { message: "Успех", user: user };
+            }
+            return { message: "Успех", user: user };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async changeNotifications(userData) {
+        try {
+            const user = await this.userRepository.findById(userData.id);
+            if (!user)
+                throw { name: "NotFoundError", message: "User not found" };
+            
+            await this.userRepository.updateOne({
+                id: userData.id,
+                notifications: !user.notifications
+            });
+            user.notifications = !user.notifications
+            return { message: "Успех", user: user };
+        } catch (error) {
+            throw error;
+        }
+    }
+
     async getScheduleByUserAndData(userData) {
         const user = await this.userRepository.findById(userData.id);
 
@@ -33,7 +68,7 @@ class UserService {
             await this.userRepository.createOne(userData);
         else if (user.username !== userData.username && user.firstname !== userData.firstname)
             await this.userRepository.updateOne(userData);
-
+        
         const { type, id } = await this._getTypeAndId(user);
         const schedule = await this._getSchedule(type, id);
         const data = await this._getData();
@@ -101,11 +136,12 @@ class UserService {
     async _getSchedule(type, id) {
         if (type == "group") {
             const schedule = await this.lessonRepository.findByGroup(id);
-            const result = this.converterSchedule.convertMiddleToPresentGroup(this.converterSchedule.convertDBToMiddle(schedule));
-            return result;    
+            const result = this.converterSchedule.convertDBToPresentGroup(schedule);
+            console.log(type)
+            return result;
         } else if (type == "teacher") {
             const schedule = await this.lessonRepository.findByTeacher(id);
-            const result = this.converterSchedule.convertMiddleToPresentTeacher(this.converterSchedule.convertDBToMiddle(schedule));
+            const result = this.converterSchedule.convertDBToPresentTeacher(schedule);
             return result;
         } else {
             return {};

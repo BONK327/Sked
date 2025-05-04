@@ -19,6 +19,9 @@ class TeacherController {
                 case "DatabaseError":
                     res.status(503).json(error);
                     break;
+                case "ForbiddenError":
+                    res.status(403).json(error);
+                    break;
                 default:
                     res.status(500).json(error);
                     break;

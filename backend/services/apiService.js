@@ -13,7 +13,7 @@ class ApiService {
         });
     }
 
-    async fetchSchedule(type, id) {
+    async getSchedule(type, id) {
         try {
             const paddedId = id.toString().padStart(9, '0');
             const response = await this.axios.get(`/GetBy${type}/${paddedId}`);
