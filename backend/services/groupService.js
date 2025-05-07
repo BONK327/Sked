@@ -8,7 +8,6 @@ const lessonRepository = new LessonRepository();
 const apiService = new ApiService();
 const converterSchedule = new ConverterSchedule();
 
-
 class GroupService {
     constructor() {
         this.groupRepository = groupRepository;

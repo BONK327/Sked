@@ -1,5 +1,4 @@
 <template>
-  <Header title="Расписание"/>
   <Slider/>
   <GroupInfo/>
   <Search/>

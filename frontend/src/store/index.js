@@ -1,6 +1,6 @@
 import { createStore } from 'vuex'
 
-const localhost = "127.0.0.1:3000";
+const localhost = "0n3jzfgz-3000.inc1.devtunnels.ms";
 // В хранилище добавляем:
 function getAcademicWeekNumber(date = new Date()) {
     // Учебный год начинается 1 сентября
@@ -364,7 +364,7 @@ export default createStore({
                         return;
                 }
 
-                const response = await fetch(`http://${localhost}/api/${endpoint}/${query}`);
+                const response = await fetch(`https://${localhost}/api/${endpoint}/${query}`);
                 if (!response.ok) throw new Error('Ошибка загрузки расписания');
 
                 const scheduleData = await response.json();

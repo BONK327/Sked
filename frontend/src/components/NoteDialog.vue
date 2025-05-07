@@ -1,5 +1,5 @@
 <template>
-  <div v-if="noteDialog.isOpen" class="note-dialog-overlay" @click.self="closeDialog">
+  <div :class="{'tg-theme': isTelegram}" :data-theme="isDarkTheme ? 'dark' : 'light'" v-if="noteDialog.isOpen" class="note-dialog-overlay" @click.self="closeDialog">
     <div class="note-dialog">
       <h3 class="dialog-title">Редактирование заметки</h3>
       <div class="dialog-meta">
@@ -44,12 +44,51 @@ export default {
         lesson: '',
         time: '',
         content: '',
-        date: ''
+        date: '',
+
+        //TG
+        isTelegram: false,
+        isDarkTheme: false,
+        tgThemeParams: {}
       }
+    }
+  },
+  created() {
+    // Проверяем, открыто ли приложение в Telegram
+    if (window.Telegram && window.Telegram.WebApp) {
+      this.isTelegram = true;
+      this.initTelegramTheme();
+      this.setupTelegramBackButton();
+      window.Telegram.WebApp.expand();
     }
   },
   computed: {
     ...mapGetters(['noteDialog', 'getNoteById']),
+    initTelegramTheme() {
+      const WebApp = window.Telegram.WebApp;
+      this.tgThemeParams = WebApp.themeParams || {};
+      this.isDarkTheme = WebApp.colorScheme === 'dark';
+      this.applyTelegramTheme();
+      WebApp.onEvent('themeChanged', this.applyTelegramTheme);
+    },
+    applyTelegramTheme() {
+      const WebApp = window.Telegram.WebApp;
+      this.isDarkTheme = WebApp.colorScheme === 'dark';
+      document.documentElement.style.setProperty('--tg-bg-color', this.tgThemeParams.bg_color || (this.isDarkTheme ? '#18222d' : '#ffffff'));
+      document.documentElement.style.setProperty('--tg-text-color', this.tgThemeParams.text_color || (this.isDarkTheme ? '#ffffff' : '#000000'));
+      document.documentElement.style.setProperty('--tg-button-color', this.tgThemeParams.button_color || '#2481cc');
+      document.documentElement.style.setProperty('--tg-button-text-color', this.tgThemeParams.button_text_color || '#ffffff');
+      document.documentElement.style.setProperty('--tg-hint-color', this.tgThemeParams.hint_color || (this.isDarkTheme ? '#aaaaaa' : '#707579'));
+      document.documentElement.style.setProperty('--tg-link-color', this.tgThemeParams.link_color || '#168acd');
+      document.documentElement.style.setProperty('--tg-secondary-bg-color', this.tgThemeParams.secondary_bg_color || (this.isDarkTheme ? '#212529' : '#f4f4f5'));
+    },
+    setupTelegramBackButton() {
+      const WebApp = window.Telegram.WebApp;
+      WebApp.BackButton.show();
+      WebApp.BackButton.onClick(() => {
+        WebApp.close();
+      });
+    },
     currentNote() {
       const note = this.getNoteById(this.noteDialog.noteId)
       return note || this.localNote
@@ -113,65 +152,89 @@ export default {
   justify-content: center
   z-index: 1000
 
+  .tg-theme &
+    background: rgba(0, 0, 0, 0.7)
+
 .note-dialog
   background: $color-white
-  border-radius: 0.5rem
+  border-radius: 12px
   position: relative
   width: 38rem
   margin: 0 1rem
   max-width: 38rem
   max-height: 40rem
   padding: 1.5rem
-  box-shadow: 0 .2rem 1rem rgba(0, 0, 0, 0.1)
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1)
+
+  .tg-theme &
+    background: var(--tg-bg-color)
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3)
 
 .dialog-title
   font-size: 1.5rem
-  color: $color-text
+  color: var(--tg-text-color)
   margin-bottom: 1rem
+  font-weight: 500
 
 .dialog-meta
   display: flex
   flex-direction: column
-  gap: 0.3rem
-  margin-bottom: 1rem
-  font-size: 0.9rem
+  gap: 0.5rem
+  margin-bottom: 1.5rem
+  padding-bottom: 0.5rem
+  border-bottom: 1px solid rgba(var(--tg-text-color), 0.1)
 
 .dialog-lesson
   font-weight: 500
   font-size: 1.2rem
-  color: $color-text
+  color: var(--tg-text-color)
 
 .dialog-time
   color: $color-light-green
   font-size: 1rem
+  font-weight: 500
+
+  .tg-theme &
+    color: $color-light-green
 
 .dialog-textarea
   width: 100%
   height: 20rem
   resize: none
-  padding: 0.8rem
-  border: .1rem solid $color-table-border
-  border-radius: 0.3rem
+  padding: 1rem
+  border: 1px solid rgba(var(--tg-text-color), 0.2)
+  border-radius: 8px
   font-family: inherit
-  font-size: 1.2rem
+  font-size: 1.1rem
   margin-bottom: 1.5rem
+  background: var(--tg-secondary-bg-color)
+  color: var(--tg-text-color)
+
+  .tg-theme &
+    background: var(--tg-bg-color)
+    border-color: rgba(var(--tg-text-color), 0.3)
+
   &:focus
     outline: none
     border-color: $color-light-green
+
+    .tg-theme &
+      border-color: $color-light-green
 
 .dialog-actions
   display: flex
   justify-content: flex-end
   gap: 0.8rem
   flex-wrap: nowrap
+
   @include respond(small-phone)
     justify-content: space-between
     gap: .8rem
     flex-wrap: wrap
 
 .dialog-button
-  padding: 0.6rem
-  border-radius: 0.3rem
+  padding: 0.7rem 1rem
+  border-radius: 8px
   cursor: pointer
   transition: all 0.2s ease
   border: none
@@ -179,46 +242,71 @@ export default {
   align-items: center
   gap: 0.5rem
   white-space: nowrap
-  @include respond(small-phone)
+  font-weight: 500
+  font-size: 1rem
 
+  @include respond(small-phone)
+    font-size: .8rem
+    padding: 0.6rem 0.8rem
+
+  svg
+    width: 1.2rem
+    height: 1.2rem
 
   &.delete
     background: $color-error
     color: $color-white
-    font-size: 1rem
+
     &:hover
       background: darken($color-error, 5%)
-    svg
-      width: 1.4rem
-      height: 1.4rem
-    @include respond(small-phone)
-      font-size: .8rem
-      svg
-        width: 1.2rem
-        height: 1.2rem
+      opacity: 0.9
+
+    .tg-theme &
+      background: $color-error
+      &:hover
+        opacity: 0.8
 
   &.view
     background: $color-light-green
     color: $color-white
-    font-size: 1rem
+
     &:hover
       background: darken($color-light-green, 5%)
-    svg
-      width: 1.4rem
-      height: 1.4rem
-    @include respond(small-phone)
-      font-size: .8rem
-      svg
-        width: 1.2rem
-        height: 1.2rem
+      opacity: 0.9
 
+    .tg-theme &
+      background: $color-light-green
+      &:hover
+        opacity: 0.8
+
+    svg path
+      fill: $color-white
 
   &.save
     background: $color-light-green
     color: $color-white
-    font-size: 1rem
+
     &:hover
       background: darken($color-light-green, 5%)
-    @include respond(small-phone)
-      font-size: .8rem
+      opacity: 0.9
+
+    .tg-theme &
+      background: $color-light-green
+      &:hover
+        opacity: 0.8
+
+// Стили для скроллбара в модальном окне
+.note-dialog::-webkit-scrollbar
+  width: 6px
+
+.note-dialog::-webkit-scrollbar-track
+  background: rgba(0, 0, 0, 0.05)
+  border-radius: 3px
+
+.note-dialog::-webkit-scrollbar-thumb
+  background: $color-light-green
+  border-radius: 3px
+
+.tg-theme .note-dialog::-webkit-scrollbar-thumb
+  background: $color-light-green
 </style>

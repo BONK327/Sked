@@ -1,11 +1,11 @@
 <template>
-  <div class="full-schedule-modal" @click.self="closeModal">
+  <div class="full-schedule-modal" @click.self="closeModal" :class="{'tg-theme': isTelegram, 'tg-dark': isDarkTheme}">
     <div class="modal-content">
       <div class="modal-header">
         <h2 class="table__title">Расписание на неделю (Неделя {{ currentWeekNumber }})</h2>
         <button class="close-btn" @click="closeModal">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M18 6L6 18M6 6L18 18" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"
+            <path d="M18 6L6 18M6 6L18 18" :stroke="isTelegram ? 'var(--tg-button-text-color)' : '#FFFFFF'" stroke-width="2" stroke-linecap="round"
               stroke-linejoin="round" />
           </svg>
         </button>
@@ -26,13 +26,12 @@
                   <span :class="[
                     'table__content-row-lesson--details',
                     'green-text'
-                  ]">{{ getMainDetails(dayIndex, row.time) }}</span>
+                  ]" v-html="getMainDetails(dayIndex, row.time)"></span>
                 </div>
                 <div class="table__content-row-room">
                   <span :class="[
                     'table__content-row-room--num',
-
-                  ]">{{ getRoomDetails(dayIndex, row.time) }}</span>
+                  ]" v-html="getRoomDetails(dayIndex, row.time)"></span>
                 </div>
               </div>
             </div>
@@ -76,7 +75,11 @@ export default {
         { shortName: 'Пт', fullName: 'Пятница' },
         { shortName: 'Сб', fullName: 'Суббота' }
       ],
-      isLoading: false
+      isLoading: false,
+      // Telegram
+      isTelegram: false,
+      isDarkTheme: false,
+      tgThemeParams: {}
     }
   },
   computed: {
@@ -88,6 +91,34 @@ export default {
   },
   methods: {
     ...mapActions(['fetchFullWeekSchedule']),
+    
+    initTelegramTheme() {
+      const WebApp = window.Telegram.WebApp;
+      
+      // Получаем параметры темы
+      this.tgThemeParams = WebApp.themeParams || {};
+      this.isDarkTheme = WebApp.colorScheme === 'dark';
+      
+      // Применяем тему
+      this.applyTelegramTheme();
+      
+      // Подписываемся на изменение темы
+      WebApp.onEvent('themeChanged', this.applyTelegramTheme);
+    },
+    
+    applyTelegramTheme() {
+      const WebApp = window.Telegram.WebApp;
+      this.isDarkTheme = WebApp.colorScheme === 'dark';
+      
+      // Обновляем CSS-переменные
+      document.documentElement.style.setProperty('--tg-bg-color', this.tgThemeParams.bg_color || '#ffffff');
+      document.documentElement.style.setProperty('--tg-text-color', this.tgThemeParams.text_color || '#000000');
+      document.documentElement.style.setProperty('--tg-button-color', this.tgThemeParams.button_color || '#2481cc');
+      document.documentElement.style.setProperty('--tg-button-text-color', this.tgThemeParams.button_text_color || '#ffffff');
+      document.documentElement.style.setProperty('--tg-hint-color', this.tgThemeParams.hint_color || '#707579');
+      document.documentElement.style.setProperty('--tg-link-color', this.tgThemeParams.link_color || '#168acd');
+      document.documentElement.style.setProperty('--tg-secondary-bg-color', this.tgThemeParams.secondary_bg_color || '#f4f4f5');
+    },
 
     closeModal() {
       this.$emit('close')
@@ -153,20 +184,39 @@ export default {
     formatTeachersWithSubgroups(items) {
       if (!items || !items.length) return ''
 
-      return items.map(item => {
+      // Сначала собираем всех уникальных преподавателей
+      const uniqueTeachers = new Map()
+      
+      items.forEach(item => {
         const teacherName = item.name || item.teacher || ''
-        const subgroup = item.subgroup ||
-          (item.groups?.[0]?.subgroup) || ''
-
-        if (!teacherName) return ''
-
+        if (!teacherName) return
+        
+        const subgroup = item.subgroup || (item.groups?.[0]?.subgroup) || ''
+        
+        if (!uniqueTeachers.has(teacherName)) {
+          uniqueTeachers.set(teacherName, new Set())
+        }
+        if (subgroup) {
+          uniqueTeachers.get(teacherName).add(subgroup)
+        }
+      })
+      
+      // Формируем строку для каждого преподавателя
+      const result = []
+      uniqueTeachers.forEach((subgroups, teacherName) => {
         const nameParts = teacherName.split(' ')
         const shortName = nameParts[0] + ' ' +
           (nameParts[1] ? nameParts[1][0] + '.' : '') +
           (nameParts[2] ? nameParts[2][0] + '.' : '')
-
-        return subgroup ? `${teacherName}(${subgroup})` : teacherName
-      }).filter(Boolean).join(', ')
+        
+        if (subgroups.size > 0) {
+          result.push(`${shortName}(${[...subgroups].join(',')})`)
+        } else {
+          result.push(shortName)
+        }
+      })
+      
+      return result.join('<br>')
     },
 
     formatGroupsWithSubgroups(groups) {
@@ -180,27 +230,22 @@ export default {
             uniqueGroups.add(baseGroup)
           }
         })
-        return [...uniqueGroups].join(', ')
+        return [...uniqueGroups].join('<br>')
       }
 
       return groups.map(g => {
         let str = g.group
         if (g.subgroup) str += `(${g.subgroup})`
         return str
-      }).join(', ')
+      }).join('<br>')
     },
 
     formatRoomsWithSubgroups(items) {
       if (!items) return ''
+      
+      // Собираем все уникальные аудитории
       const roomMap = new Map()
-      const allSubgroups = new Set()
-
-      items.forEach(item => {
-        if (item.subgroup) {
-          allSubgroups.add(item.subgroup)
-        }
-      })
-
+      
       items.forEach(item => {
         if (item.room) {
           if (!roomMap.has(item.room)) {
@@ -211,13 +256,27 @@ export default {
           }
         }
       })
-
-      return [...roomMap.entries()].map(([room, subgroups]) => {
-        return subgroups.size === allSubgroups.size ? room : `${room}(${[...subgroups].join(',')})`
-      }).join(', ')
+      
+      // Формируем строки для аудиторий
+      const result = []
+      roomMap.forEach((subgroups, room) => {
+        if (subgroups.size > 0) {
+          result.push(`${room}(${[...subgroups].join(',')})`)
+        } else {
+          result.push(room)
+        }
+      })
+      
+      return result.join('<br>')
     }
   },
   async created() {
+    // Проверяем, открыто ли приложение в Telegram
+    if (window.Telegram && window.Telegram.WebApp) {
+      this.isTelegram = true;
+      this.initTelegramTheme();
+    }
+    
     this.isLoading = true
     try {
       await this.fetchFullWeekSchedule()
@@ -240,12 +299,14 @@ export default {
   left: 0
   right: 0
   bottom: 0
-  background-color: $color-bg-bigScreen
+  background-color: rgba(0, 0, 0, 0.5)
   display: flex
   justify-content: center
   align-items: center
   z-index: 1000
   overflow: auto
+  .tg-theme &
+    background-color: rgba(0, 0, 0, 0.7)
 
 .modal-content
   background-color: $color-white
@@ -256,11 +317,17 @@ export default {
   display: flex
   flex-direction: column
   overflow: hidden
+  border-radius: 0.8rem
+  .tg-theme.tg-dark &
+    background-color: var(--tg-bg-color)
+  
   &::-webkit-scrollbar
     width: .6rem
   &::-webkit-scrollbar-track
     background: rgba(0, 0, 0, 0.05)
     border-radius: .3rem
+    .tg-theme.tg-dark &
+      background: rgba(255, 255, 255, 0.1)
   &::-webkit-scrollbar-thumb
     background: $color-light-green
     border-radius: .3rem
@@ -270,6 +337,7 @@ export default {
   border: none
   cursor: pointer
   z-index: 10
+  padding: 0.5rem
 
 .modal-header
   display: flex
@@ -277,11 +345,14 @@ export default {
   padding: 1rem
   background-color: $color-light-green
   color: white
-  border-radius: 0 0 .8rem .8rem
+  border-radius: 0.8rem 0.8rem 0 0
+  
   h2
     font-size: 1.5rem
     font-weight: 400
     margin: 0
+    .tg-theme &
+      color: var(--tg-button-text-color)
 
 .modal-body
   flex: 1
@@ -292,6 +363,8 @@ export default {
   &::-webkit-scrollbar-track
     background: rgba(0, 0, 0, 0.05)
     border-radius: 3px
+    .tg-theme.tg-dark &
+      background: rgba(255, 255, 255, 0.1)
   &::-webkit-scrollbar-thumb
     background: $color-light-green
     border-radius: 3px
@@ -301,6 +374,13 @@ export default {
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr))
   gap: 1.5rem
 
+.loading
+  text-align: center
+  padding: 2rem
+  font-size: 1.2rem
+  .tg-theme.tg-dark &
+    color: var(--tg-text-color)
+
 .table
   width: 100%
   min-height: 100%
@@ -309,6 +389,9 @@ export default {
   overflow: hidden
   display: flex
   flex-direction: column
+  .tg-theme.tg-dark &
+    background-color: var(--tg-hint-color)
+  
   &__title
     font-size: 1.2rem
     font-weight: 400
@@ -320,6 +403,7 @@ export default {
     border-collapse: collapse
     display: flex
     flex-direction: column
+    
     &-row
       position: relative
       display: flex
@@ -331,6 +415,10 @@ export default {
       background-color: white
       border: solid 0.1rem $color-table-border
       margin-top: -0.1rem
+      .tg-theme.tg-dark &
+        background-color: var(--tg-bg-color)
+        border-color: var(--tg-hint-color)
+      
       &-time
         align-self: center
         padding: 1.5rem 0.5rem
@@ -339,17 +427,25 @@ export default {
         font-weight: 400
         box-sizing: border-box
         overflow-wrap: break-word
+        .tg-theme.tg-dark &
+          color: var(--tg-text-color)
         @include respond(small-phone)
           font-size: 0.8rem
+      
       &-color
         width: 0.75rem
         flex: 0 0 auto
         min-height: 5rem
         align-self: stretch
+      
       &-color--seminar
         background-color: $color-table-border
+        .tg-theme.tg-dark &
+          background-color: var(--tg-hint-color)
+      
       &-color--lection
         background-color: $color-orange
+      
       &-lesson
         padding: 0.5rem 0.8rem
         flex: 1
@@ -364,9 +460,11 @@ export default {
           box-sizing: border-box
           @include respond(small-phone)
             font-size: 0.8rem
+        
         &--class
           line-height: 1rem
           margin-bottom: 0.2rem
+      
       &-room
         align-self: flex-start
         text-align: center
@@ -379,8 +477,11 @@ export default {
         font-size: 1rem
         font-weight: 400
         box-sizing: border-box
+        .tg-theme.tg-dark &
+          color: var(--tg-text-color)
         @include respond(small-phone)
           font-size: 0.8rem
+        
         &--num
           letter-spacing: -0.03rem
 

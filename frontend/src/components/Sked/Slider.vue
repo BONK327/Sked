@@ -1,5 +1,5 @@
 <template>
-  <section class="slider">
+  <section class="slider" :class="{'tg-theme': isTelegram, 'tg-dark': isDarkTheme}">
     <!-- Стрелки -->
     <svg class="slider__left" :class="{ 'slider__arrow-disabled': weekOffset <= -2 }" width="6" height="10"
       viewBox="0 0 6 10" fill="none" xmlns="http://www.w3.org/2000/svg" @click="prevWeek">
@@ -52,7 +52,11 @@ export default {
       monthNames: ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'],
       days: [],
       selectedDate: null,
-      todayAdjusted: new Date()
+      todayAdjusted: new Date(),
+      // Telegram
+      isTelegram: false,
+      isDarkTheme: false,
+      tgThemeParams: {}
     }
   },
   computed: {
@@ -61,11 +65,58 @@ export default {
       const today = new Date()
       if (today.getDay() === 0) return 0 // Если воскресенье, показываем понедельник
       return today.getDay() - 1
+    },
+  },
+  created() {
+    // Проверяем, открыто ли приложение в Telegram
+    if (window.Telegram && window.Telegram.WebApp) {
+      this.isTelegram = true;
+      this.initTelegramTheme();
+      this.setupTelegramBackButton();
+
+      // Развернуть приложение на весь экран
+      window.Telegram.WebApp.expand();
     }
   },
   methods: {
     ...mapActions(['setSelectedDay', 'setCurrentWeekType']),
-
+    initTelegramTheme() {
+      const WebApp = window.Telegram.WebApp;
+      
+      // Получаем параметры темы
+      this.tgThemeParams = WebApp.themeParams || {};
+      this.isDarkTheme = WebApp.colorScheme === 'dark';
+      
+      // Применяем тему
+      this.applyTelegramTheme();
+      
+      // Подписываемся на изменение темы
+      WebApp.onEvent('themeChanged', this.applyTelegramTheme);
+    },
+    applyTelegramTheme() {
+      const WebApp = window.Telegram.WebApp;
+      this.isDarkTheme = WebApp.colorScheme === 'dark';
+      
+      // Обновляем CSS-переменные
+      document.documentElement.style.setProperty('--tg-bg-color', this.tgThemeParams.bg_color || '#ffffff');
+      document.documentElement.style.setProperty('--tg-text-color', this.tgThemeParams.text_color || '#000000');
+      document.documentElement.style.setProperty('--tg-button-color', this.tgThemeParams.button_color || '#2481cc');
+      document.documentElement.style.setProperty('--tg-button-text-color', this.tgThemeParams.button_text_color || '#ffffff');
+      document.documentElement.style.setProperty('--tg-hint-color', this.tgThemeParams.hint_color || '#707579');
+      document.documentElement.style.setProperty('--tg-link-color', this.tgThemeParams.link_color || '#168acd');
+      document.documentElement.style.setProperty('--tg-secondary-bg-color', this.tgThemeParams.secondary_bg_color || '#f4f4f5');
+      document.documentElement.style.setProperty('--tg-disabled', this.tgThemeParams.disabled || '#5c5c5c');
+    },
+    setupTelegramBackButton() {
+      const WebApp = window.Telegram.WebApp;
+      
+      // Показываем кнопку "Назад", если это необходимо
+      WebApp.BackButton.show();
+      WebApp.BackButton.onClick(() => {
+        // Здесь можно добавить логику навигации назад
+        WebApp.close(); // или другая логика
+      });
+    },
     resetWeekState() {
       this.weekOffset = 0;
       localStorage.removeItem('currentWeekNumber');
@@ -252,6 +303,15 @@ export default {
     min-width: 1.2rem
     min-height: 1.2rem
     transition: transform 0.2s
+    path
+      fill: #1E1E1E
+      transition: fill .3s ease
+
+    .tg-theme & path
+      fill: var(--tg-text-color)
+
+    &.slider__arrow-disabled path
+      fill: #CCCCCC
     @include respond(small-phone)
       min-height: 1rem
       min-width: 1rem
@@ -314,17 +374,23 @@ export default {
       font-size: 1.6rem
       font-weight: 400
       line-height: 1.9rem
+      .tg-theme.tg-dark &
+        color: var(--tg-text-color)
 
     &-prev-active
       background-color: $color-light-grey
       border-radius: 0.3rem
       transition: all .3s ease
+      .tg-theme &
+        background-color: var(--tg-hint-color)
 
     &-active
       background-color: $color-light-green
       color: white
       border-radius: 0.3rem
       transition: all .3s ease
+      .tg-theme &
+        background-color: $color-light-green
 
       // Отключаем hover для активного элемента
       @media (hover: hover) and (pointer: fine)

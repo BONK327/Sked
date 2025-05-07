@@ -1,4 +1,43 @@
-// Переменные для SASS
+// Базовые переменные (одинаковые для всех тем)
+$content-max-width: 40rem
+$footer-height: 5rem
+$mobile-breakpoint: 45rem
+$header-height: 6rem
+
+// TELEGRAM THEME VARIABLES
+// Светлая тема по умолчанию
+:root
+  --tg-bg-color: #ffffff
+  --tg-text-color: #101010
+  --tg-button-color: #3DB95E
+  --tg-button-text-color: #ffffff
+  --tg-hint-color: #707579
+  --tg-link-color: #33984E
+  --tg-secondary-bg-color: #f4f4f5
+  --tg-body: #d9d9d9
+
+// Темная тема Telegram
+[data-theme="dark"]
+  --tg-bg-color: #202020
+  --tg-text-color: #ffffff
+  --tg-button-color: #2481cc
+  --tg-button-text-color: #ffffff
+  --tg-hint-color: #808080
+  --tg-link-color: #168acd
+  --tg-secondary-bg-color: #212529 
+  --tg-body: #151515
+
+// Общие SASS-переменные (используют CSS-переменные)
+$tg-bg: var(--tg-bg-color)
+$tg-text: var(--tg-text-color)
+$tg-button: var(--tg-button-color)
+$tg-button-text: var(--tg-button-text-color)
+$tg-hint: var(--tg-hint-color)
+$tg-link: var(--tg-link-color)
+$tg-secondary-bg: var(--tg-secondary-bg-color)
+$tg-disabled: var(--tg-disabled)
+
+// Цвета приложения (одинаковые для всех тем)
 $color-white: #ffffff
 $color-light-green: #3DB95E
 $color-dark-green: #33984E
@@ -8,51 +47,28 @@ $color-table-border: #D9D9D9
 $color-text: #1E1E1E
 $color-orange: #FFAC52
 $color-error: #FF3B30
-$color-bg-bigScreen: #212529
-
-$content-max-width: 40rem
-$footer-height: 5rem
-$mobile-breakpoint: 45rem
-$header-height: 6rem
-
-
-// TELEGRAM THEME
-// Стандартные CSS-переменные (для динамического изменения)
-  :root
-    --tg-bg-color: #ffffff
-    --tg-text-color: #000000
-    --tg-button-color: #2481cc
-    --tg-button-text-color: #ffffff
-    --tg-hint-color: #707579
-    --tg-link-color: #168acd
-    --tg-secondary-bg-color: #f4f4f5
-
-
-// SASS-переменные (для удобного использования)
-$tg-bg: var(--tg-bg-color)
-$tg-text: var(--tg-text-color)
-$tg-button: var(--tg-button-color)
-$tg-button-text: var(--tg-button-text-color)
-$tg-hint: var(--tg-hint-color)
-$tg-link: var(--tg-link-color)
-$tg-secondary-bg: var(--tg-secondary-bg-color)
-
 
 // Миксин для Telegram-кнопок
 =telegram-button
-  background: $tg-button
+  background-color: $color-light-green
   color: $tg-button-text
   border: none
-  border-radius: .8rem
+  border-radius: .3rem
   padding: 0.5rem 1rem
   font-weight: 500
   cursor: pointer
+  transition: opacity 0.2s
 
   &:hover
     opacity: 0.9
 
+  &:active
+    opacity: 0.8
 
-// Пример использования
-.button-tg
-  +telegram-button
-  font-size: 1rem
+// Миксин для элементов в Telegram
+=telegram-element
+  background-color: $tg-secondary-bg
+  color: $tg-text
+  border-radius: 12px
+  padding: 12px
+  margin-bottom: 8px

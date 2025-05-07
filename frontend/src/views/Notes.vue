@@ -1,5 +1,5 @@
 <template>
-  <div class="notes">
+  <div class="notes" :class="{'tg-theme': isTelegram}" :data-theme="isDarkTheme ? 'dark' : 'light'">
     <Header title="Заметки"/>
     <div v-if="notes.length > 0" class="notes-list">
       <div
@@ -70,7 +70,19 @@ export default {
   data() {
     return {
       editingNote: null,
-      highlightTimeout: null
+      highlightTimeout: null,
+      isTelegram: false,
+      isDarkTheme: false,
+      tgThemeParams: {}
+    }
+  },
+  created() {
+    // Проверяем, открыто ли приложение в Telegram
+    if (window.Telegram && window.Telegram.WebApp) {
+      this.isTelegram = true;
+      this.initTelegramTheme();
+      this.setupTelegramBackButton();
+      window.Telegram.WebApp.expand();
     }
   },
   computed: {
@@ -92,6 +104,31 @@ export default {
   },
   methods: {
     ...mapActions(['updateNote', 'deleteNote']),
+    initTelegramTheme() {
+      const WebApp = window.Telegram.WebApp;
+      this.tgThemeParams = WebApp.themeParams || {};
+      this.isDarkTheme = WebApp.colorScheme === 'dark';
+      this.applyTelegramTheme();
+      WebApp.onEvent('themeChanged', this.applyTelegramTheme);
+    },
+    applyTelegramTheme() {
+      const WebApp = window.Telegram.WebApp;
+      this.isDarkTheme = WebApp.colorScheme === 'dark';
+      document.documentElement.style.setProperty('--tg-bg-color', this.tgThemeParams.bg_color || (this.isDarkTheme ? '#18222d' : '#ffffff'));
+      document.documentElement.style.setProperty('--tg-text-color', this.tgThemeParams.text_color || (this.isDarkTheme ? '#ffffff' : '#000000'));
+      document.documentElement.style.setProperty('--tg-button-color', this.tgThemeParams.button_color || '#2481cc');
+      document.documentElement.style.setProperty('--tg-button-text-color', this.tgThemeParams.button_text_color || '#ffffff');
+      document.documentElement.style.setProperty('--tg-hint-color', this.tgThemeParams.hint_color || (this.isDarkTheme ? '#aaaaaa' : '#707579'));
+      document.documentElement.style.setProperty('--tg-link-color', this.tgThemeParams.link_color || '#168acd');
+      document.documentElement.style.setProperty('--tg-secondary-bg-color', this.tgThemeParams.secondary_bg_color || (this.isDarkTheme ? '#212529' : '#f4f4f5'));
+    },
+    setupTelegramBackButton() {
+      const WebApp = window.Telegram.WebApp;
+      WebApp.BackButton.show();
+      WebApp.BackButton.onClick(() => {
+        WebApp.close();
+      });
+    },
     formatDate(dateString) {
       const date = new Date(dateString)
       const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
@@ -146,53 +183,64 @@ export default {
   display: flex
   flex-direction: column
   height: calc(100vh - #{$header-height} - #{$footer-height} - 2rem)
-  background: $color-white
+  width: 100%
+  background: var(--tg-secondary-bg-color)
   overflow: hidden
-  &__title
-    font-size: 1.5rem
-    font-weight: 500
-    margin-bottom: 1.5rem
-    color: $color-text
-    flex-shrink: 0
+  padding: 1.5rem
+  color: var(--tg-text-color)
+
+  &.tg-theme
+    background: var(--tg-secondary-bg-color)
+    color: var(--tg-text-color)
 
 .notes-list
   display: flex
   flex-direction: column
-  gap: 1.5rem
+  gap: 1rem
   flex: 1
   overflow-y: auto
-  padding-right: 0.5rem // Для отступа под скролл
-  // Стили для скроллбара (опционально)
-  &::-webkit-scrollbar
-    width: .6rem
-  &::-webkit-scrollbar-track
-    background: rgba(0, 0, 0, 0.05)
-    border-radius: .3rem
-  &::-webkit-scrollbar-thumb
-    background: $color-light-green
-    border-radius: .3rem
+  padding-right: 0.5rem
+
+  // Стили для скроллбара в Telegram теме
+  .tg-theme &
+    &::-webkit-scrollbar
+      width: .4rem
+    &::-webkit-scrollbar-track
+      background: rgba($tg-text, 0.05)
+      border-radius: .3rem
+    &::-webkit-scrollbar-thumb
+      background: $color-light-green
+      border-radius: .3rem
 
 .note-item
-  background: white
-  border-radius: 0.5rem
-  padding: 1.25rem
+  +telegram-element
   transition: all 0.3s ease
-  box-shadow: 0 0.1rem 0.3rem rgba(0, 0, 0, 0.1)
+  box-shadow: none
+  margin-bottom: 0
+  border-left: 3px solid transparent
+
+  .tg-theme &
+    background-color: var(--tg-bg-color)
+    color: var(--tg-text-color)
+
   &--active
     position: relative
-    border-left: .4rem solid $color-light-green
-    background-color: rgba($color-light-green, 0.05)
+    border-left-color: $color-light-green
+    background-color: rgba($color-light-green, 0.1)
     animation: pulse-highlight 3s ease-out forwards
+
+    .tg-theme &
+      background-color: rgba($color-light-green, 0.2)
 
 @keyframes pulse-highlight
   0%
-    background-color: rgba($color-light-green, 0.1)
+    background-color: rgba($color-light-green, 0.2)
     border-left-color: $color-light-green
   70%
-    background-color: rgba($color-light-green, 0.05)
+    background-color: rgba($color-light-green, 0.1)
     border-left-color: $color-light-green
   100%
-    background-color: transparent
+    background-color: var(--tg-bg-color)
     border-left-color: transparent
 
 .note-header
@@ -206,15 +254,16 @@ export default {
   flex-direction: column
   gap: 0.3rem
   font-size: 0.85rem
-  color: lighten($color-text, 20%)
+  color: var(--tg-hint-color)
 
 .note-date
   font-weight: 600
-  font-size: 1.2rem
+  font-size: 1.1rem
+  color: var(--tg-text-color)
 
 .note-time
   color: $color-light-green
-  font-size: 1.2rem
+  font-size: 1.1rem
   font-weight: 600
 
 .note-content-wrapper
@@ -225,14 +274,14 @@ export default {
 .note-lesson
   font-size: 1.2rem
   font-weight: 500
-  color: $color-text
+  color: var(--tg-text-color)
   margin: 0
 
 .note-details
   display: flex
   gap: 1rem
   font-size: 0.9rem
-  color: lighten($color-text, 20%)
+  color: var(--tg-hint-color)
 
 .note-teacher
   font-size: 1rem
@@ -240,9 +289,11 @@ export default {
 
 .note-room
   font-size: 1rem
+  color: var(--tg-hint-color)
   &::before
     content: "•"
     margin-right: 0.5rem
+    color: var(--tg-hint-color)
 
 .note-actions
   display: flex
@@ -259,16 +310,27 @@ export default {
   justify-content: center
   border-radius: 50%
   transition: background 0.2s ease
-  &:hover
-    background: rgba(0, 0, 0, 0.05)
+
+  .tg-theme &
+    &:hover
+      background: rgba(var(--tg-text-color), 0.1)
+
+.note-edit-btn svg path
+  stroke: $color-light-green
+
+.note-delete-btn svg path
+  stroke: $color-error
 
 .note-content
-  color: $color-text
+  color: var(--tg-text-color)
   white-space: pre-line
   line-height: 1.5
   padding-top: 0.5rem
-  border-top: .1rem solid $color-table-border
-  font-size: 1.2rem
+  border-top: 1px solid rgba(var(--tg-text-color), 0.1)
+  font-size: 1.1rem
+
+  .tg-theme &
+    color: var(--tg-text-color)
 
 .note-edit
   margin-top: 1rem
@@ -278,11 +340,18 @@ export default {
   min-height: 5rem
   max-height: 15rem
   padding: 0.8rem
-  border: .1rem solid $color-table-border
-  border-radius: 0.3rem
+  border: 1px solid rgba(var(--tg-text-color), 0.2)
+  border-radius: 0.5rem
   font-family: inherit
-  font-size: 1.2rem
+  font-size: 1.1rem
   resize: vertical
+  background: var(--tg-secondary-bg-color)
+  color: var(--tg-text-color)
+
+  .tg-theme &
+    background: var(--tg-bg-color)
+    border-color: rgba(var(--tg-text-color), 0.3)
+
   &:focus
     outline: none
     border-color: $color-light-green
@@ -296,29 +365,27 @@ export default {
 .note-edit-cancel,
 .note-edit-save
   padding: 0.5rem 1rem
-  border-radius: 0.3rem
+  border-radius: 0.5rem
   font-size: 0.9rem
   cursor: pointer
   transition: all 0.2s ease
 
 .note-edit-cancel
   background: none
-  border: 1px solid $color-table-border
-  color: $color-text
-  &:hover
-    background: rgba(0, 0, 0, 0.05)
+  border: 1px solid rgba(var(--tg-text-color), 0.2)
+  color: var(--tg-text-color)
+
+  .tg-theme &
+    &:hover
+      background: rgba(var(--tg-text-color), 0.1)
 
 .note-edit-save
-  background: $color-light-green
-  border: 1px solid $color-light-green
-  color: white
-  &:hover
-    background: darken($color-light-green, 5%)
-    border-color: darken($color-light-green, 5%)
+  +telegram-button
+  font-size: 0.9rem
 
 .notes-empty
   text-align: center
-  color: lighten($color-text, 30%)
+  color: var(--tg-hint-color)
   padding: 2rem
   font-size: 1.1rem
 </style>

@@ -1,12 +1,18 @@
 const GroupRepository = require('../repositories/groupRepository');
 const RoomRepository = require('../repositories/roomRepository');
 const TeacherRepository = require('../repositories/teacherRepository');
-// const UserRepository = require('../repositories/userRepository');
+const LessonRepository = require('../repositories/lessonRepository');
+const UserRepository = require('../repositories/userRepository');
+const ConverterSchedule = require('../utils/convertSchedule');
+const NoteService = require('./noteService');
 
 const groupRepository = new GroupRepository();
 const roomRepository = new RoomRepository();
 const teacherRepository = new TeacherRepository();
-// const userRepository = new UserRepository();
+const lessonRepository = new LessonRepository();
+const userRepository = new UserRepository();
+const noteService = new NoteService();
+const convertSchedule = new ConverterSchedule();
 
 
 class UserService {
@@ -14,37 +20,99 @@ class UserService {
         this.groupRepository = groupRepository;
         this.roomRepository = roomRepository;
         this.teacherRepository = teacherRepository;
-        // this.userRepository = userRepository;
+        this.lessonRepository = lessonRepository;
+        this.userRepository = userRepository;
+        this.converterSchedule = convertSchedule;
+        this.noteService = noteService;
     }
 
-    async getScheduleByUserAndData(user) {
-        const { type, id } = await this.updateAndGetDataUser(user);
-        const schedule = await this.getSchedule(type, id);
-        const data = await this.getData();
+    async getScheduleByUserAndData(userData) {
+        const user = await this.userRepository.findById(userData.id);
+
+        if (!user)
+            await this.userRepository.createOne(userData);
+        else if (user.username !== userData.username && user.firstname !== userData.firstname)
+            await this.userRepository.updateOne(userData);
+
+        const { type, id } = await this._getTypeAndId(user);
+        const schedule = await this._getSchedule(type, id);
+        const data = await this._getData();
+        const notes = await this.noteService.findAllNoteByUser(userData.id);
         return {
             schedule: schedule,
-            data: data
+            data: data,
+            notes: notes
         };
     }
 
-    async updateAndGetDataUser(user) {
-        // Запрос к БД на получении данных об user.id в userDB
-        // Если данные разные (user и userDB), то записать в БД новые
-        // Вывести тип расписания и id сущности
-        return {
-            type: "group",
-            id: 3856
-        };
+    async changeUserType(userData) {
+        const user = await this.userRepository.findById(userData.id);
+
+        if (!user)
+            throw { name: "NotFoundError", message: "User not found" };
+        if (userData.type !== "group" && userData.type !== "teacher")
+            throw { name: "IncorrectBodyError", message: "Incorrect form body for change first schedule" }
+        
+        const { type, id } = await this._getTypeAndId(user);
+        const name = await this._getName(type, id);
+
+        if (!(type === userData.type && name === userData.name)) {
+            const data = { id: userData.id, group_id: null, teacher_id: null }
+            if (userData.type == "group") {
+                const group = await groupRepository.findByName(userData.name)
+                if (!group)
+                    throw { name: "NotFoundError", message: `Group '${userData.name}' not found` };
+                data.group_id = group.id
+            }
+            else {
+                const teacher = await teacherRepository.findByName(userData.name)
+                if (!teacher)
+                    throw { name: "NotFoundError", message: `Teacher '${userData.name}' not found` }
+                data.teacher_id = teacher.id
+            }
+            try {
+                await this.userRepository.updateOne(data);
+            } catch (error) {
+                throw error;
+            }
+        }
+        return { message: "Successful change" }
     }
 
-    async getSchedule(type, id) {
-        // Получить расписание в общем виде
-        // Преобразовать расписание в зависимости от type
-        // Вернуть расписание
-        return {};
+    async _getTypeAndId(user) {
+        if (user?.group_id)
+            return { type: "group", id: user.group_id }
+        else if (user?.teacher_id)
+            return { type: "teacher", id: user.teacher_id }
+        else
+            return { type: "", id: -1 }
     }
 
-    async getData() {
+    async _getName(type, id) {
+        if (type == "group") {
+            return (await this.groupRepository.findById(id)).name;
+        } else if (type == "teacher") {
+            return (await this.teacherRepository.findById(id)).shortname;
+        } else {
+            return undefined;
+        }
+    }
+
+    async _getSchedule(type, id) {
+        if (type == "group") {
+            const schedule = await this.lessonRepository.findByGroup(id);
+            const result = this.converterSchedule.convertMiddleToPresentGroup(this.converterSchedule.convertDBToMiddle(schedule));
+            return result;    
+        } else if (type == "teacher") {
+            const schedule = await this.lessonRepository.findByTeacher(id);
+            const result = this.converterSchedule.convertMiddleToPresentTeacher(this.converterSchedule.convertDBToMiddle(schedule));
+            return result;
+        } else {
+            return {};
+        }
+    }
+
+    async _getData() {
         const groups = (await this.groupRepository.findAll()).map(group => group.name);
         const teachers = (await this.teacherRepository.findAll()).map(teacher => teacher.shortname);
         const rooms = (await this.roomRepository.findAll()).map(room => room.name);
