@@ -373,7 +373,7 @@ export default {
 
     th,
     td
-      font-size: 1.1rem
+      font-size: 1rem
       font-weight: 400
       box-sizing: border-box
       overflow-wrap: break-word

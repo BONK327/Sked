@@ -1,24 +1,24 @@
 @mixin respond($breakpoint)
   @if $breakpoint == small-phone
-    @media only screen and (max-width: 351px)
+    @media only screen and (max-width: 321px)
       @content
 
   @if $breakpoint == phone
-    @media only screen and (min-width: 351px) and (max-width: 421px)
+    @media only screen and (min-width: 321px) and (max-width: 481px)
       @content
 
   @if $breakpoint == tab-port
-    @media only screen and (min-width: 421px) and (max-width: 541px)
+    @media only screen and (min-width: 481px) and (max-width: 769px)
       @content
 
   @if $breakpoint == tab-lend
-    @media only screen and (min-width: 541px) and (max-width: 761px)
+    @media only screen and (min-width: 769px) and (max-width: 1025px)
       @content
 
   @if $breakpoint == computer
-    @media only screen and (min-width: 761px) and (max-width: 901px)
+    @media only screen and (min-width: 1025px) and (max-width: 1281px)
       @content
 
   @if $breakpoint == big-screen
-    @media only screen and (min-width: 901px)
+    @media only screen and (min-width: 1281px)
       @content

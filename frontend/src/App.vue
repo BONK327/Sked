@@ -123,6 +123,7 @@ export default {
 *
   margin: 0
   padding: 0
+  user-zoom: fixed
   box-sizing: border-box
 
 html
@@ -137,7 +138,7 @@ html
   @include respond(tab-port)
     font-size: 77.5%
   @include respond(phone)
-    font-size: 75%
+    font-size: 72.5%
   @include respond(small-phone)
     font-size: 62.5%
 
@@ -168,12 +169,13 @@ body
 .container
   flex: 1
   overflow-y: auto
+  overflow-x: hidden
   width: 100%
   min-height: calc(100vh - #{$footer-height})
   padding: 1.5rem
   position: relative
   z-index: 0
-  transition: all 0.3s ease
+  // transition: all 0.3s ease
   background-color: $color-white
   color: $color-text
   
