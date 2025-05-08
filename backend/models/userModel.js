@@ -25,6 +25,10 @@ const UserModel = sequelize.define("User",
         firstname: {
             type: DataTypes.STRING(30),
             allowNull: false
+        },
+        notifications: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: 1
         }
     }, {
         tableName: 'users',

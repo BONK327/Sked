@@ -1,6 +1,7 @@
 import { createStore } from 'vuex'
 
-const localhost = "0n3jzfgz-3000.inc1.devtunnels.ms";
+//const localhost = "0n3jzfgz-3000.inc1.devtunnels.ms";
+const localhost = "localhost:3000";
 // В хранилище добавляем:
 function getAcademicWeekNumber(date = new Date()) {
     // Учебный год начинается 1 сентября
@@ -50,7 +51,12 @@ export default createStore({
         currentGroup: localStorage.getItem('currentGroup') || null,
         currentTeacher: null,
         currentRoom: null,
-        searchType: 'group' // 'group', 'teacher' или 'room'
+        searchType: 'group', // 'group', 'teacher' или 'room'
+
+        allGroups: [],
+        allTeachers: [],
+        allRooms: [],
+        userNotes: []
 
 
     },
@@ -70,7 +76,7 @@ export default createStore({
         SET_CURRENT_TEACHER(state, payload) {
             state.currentTeacher = payload.displayQuery || payload;
             state.searchType = 'teacher';
-          },
+        },
         CLEAR_SEARCH(state) {
             state.currentGroup = null;
             state.currentTeacher = null;
@@ -154,10 +160,21 @@ export default createStore({
             state.searchType = 'group'
             localStorage.setItem('currentGroup', group)
         },
-        SET_CURRENT_TEACHER(state, teacher) {
-            state.currentTeacher = teacher
-            state.searchType = 'teacher'
-        },
+        // SET_CURRENT_TEACHER(state, teacher) {
+        //     state.currentTeacher = teacher
+        //     state.searchType = 'teacher'
+        // },
+        SET_CURRENT_TEACHER(state, payload) {
+            // payload может быть строкой или объектом { query, displayQuery }
+            if (typeof payload === 'object') {
+              state.currentTeacher = payload.displayQuery;
+              state.teacherApiQuery = payload.query; // Сохраняем API-формат
+            } else {
+              state.currentTeacher = payload;
+              state.teacherApiQuery = payload.replace(/ /g, '_');
+            }
+            state.searchType = 'teacher';
+          },
         SET_CURRENT_ROOM(state, room) {
             state.currentRoom = room
             state.searchType = 'room'
@@ -168,7 +185,16 @@ export default createStore({
                 week2: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
             }
         },
+        SET_ALL_DATA_LISTS(state, data) {
+            state.allGroups = data.groups || [];
+            state.allTeachers = data.teachers || [];
+            state.allRooms = data.rooms || [];
+        },
+        SET_USER_NOTES(state, notes) {
+            state.userNotes = notes || [];
+        },
         
+
 
 
     },
@@ -337,10 +363,13 @@ export default createStore({
             }
         },
 
-        async fetchFullWeekSchedule({ commit, state }) {
+        async fetchFullWeekSchedule({ commit, state, dispatch }) {
             try {
                 commit('SET_LOADING', true);
-                commit('CLEAR_SCHEDULE');
+
+                if (!state.baseWeekNumber) {
+                    commit('CLEAR_SCHEDULE');
+                }
 
                 let endpoint, query;
 
@@ -364,91 +393,30 @@ export default createStore({
                         return;
                 }
 
-                const response = await fetch(`https://${localhost}/api/${endpoint}/${query}`);
+                const response = await fetch(`http://${localhost}/api/${endpoint}/${query}`);
                 if (!response.ok) throw new Error('Ошибка загрузки расписания');
 
                 const scheduleData = await response.json();
                 console.log('Получены данные расписания:', scheduleData);
 
-                // Определяем номер текущей недели математически
-                const calculatedWeek = getAcademicWeekNumber();
-                console.log('Математически рассчитанная неделя:', calculatedWeek);
+                if (!state.baseWeekNumber) {
+                    const calculatedWeek = getAcademicWeekNumber();
+                    console.log('Математически рассчитанная неделя:', calculatedWeek);
 
-                // Проверяем, есть ли такая неделя в данных API
-                const weeksInAPI = [...new Set(scheduleData.lessons.map(l => l.numberWeek))];
-                console.log('Недели в API:', weeksInAPI);
+                    const weeksInAPI = [...new Set(scheduleData.lessons.map(l => l.numberWeek))];
+                    console.log('Недели в API:', weeksInAPI);
 
-                // Определяем базовую неделю (используем рассчитанную, если она есть в API)
-                const baseWeek = weeksInAPI.includes(calculatedWeek) ? calculatedWeek :
-                    weeksInAPI.includes(1) ? 1 : 2;
+                    const baseWeek = weeksInAPI.includes(calculatedWeek) ? calculatedWeek :
+                        weeksInAPI.includes(1) ? 1 : 2;
 
-                console.log('Установлена базовая неделя:', baseWeek);
-                commit('SET_BASE_WEEK_NUMBER', baseWeek);
-                commit('SET_CURRENT_WEEK_NUMBER', baseWeek);
-                commit('SET_CURRENT_WEEK_TYPE', `week${baseWeek}`);
-
-                // Обработка данных расписания
-                const formatLessonTime = (number) => {
-                    const times = {
-                        1: '08:00<br>09:30',
-                        2: '09:45<br>11:15',
-                        3: '11:30<br>13:00',
-                        4: '13:50<br>15:20',
-                        5: '15:35<br>17:05',
-                        6: '17:20<br>18:50',
-                        11: '08:00<br>09:30',
-                        12: '09:45<br>11:15',
-                        13: '11:30<br>13:00',
-                        14: '13:15<br>14:45',
-                        15: '15:00<br>16:30',
-                        16: '16:45<br>18:15'
-                    };
-                    return times[number] || '';
-                };
-
-                const transformedData = {
-                    week1: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
-                    week2: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
-                };
-
-                scheduleData.lessons.forEach(lesson => {
-                    const weekType = `week${lesson.numberWeek}`;
-                    const dayIndex = lesson.numberDay - 1;
-                    let num = lesson.numberDay === 6 ? lesson.number + 10 : lesson.number;
-
-                    const transformedLesson = {
-                        time: formatLessonTime(num),
-                        type: lesson.type,
-                        lesson: lesson.name,
-                        weekNumber: lesson.numberWeek
-                    };
-
-                    if (state.searchType === 'group') {
-                        transformedLesson.teachers = lesson.details || [];
-                    }
-                    else if (state.searchType === 'teacher') {
-                        transformedLesson.room = lesson.room || '';
-                        transformedLesson.details = lesson.details || [];
-                    }
-                    else if (state.searchType === 'room') {
-                        transformedLesson.details = lesson.details?.map(d => ({
-                            name: d.name,
-                            groups: d.groups || []
-                        })) || [];
-                    }
-
-                    transformedData[weekType][dayIndex].push(transformedLesson);
-                });
-
-                for (const weekType of ['week1', 'week2']) {
-                    for (let dayIndex = 0; dayIndex < 6; dayIndex++) {
-                        commit('SET_WEEK_SCHEDULE', {
-                            weekType,
-                            dayIndex,
-                            schedule: transformedData[weekType][dayIndex] || []
-                        });
-                    }
+                    console.log('Установлена базовая неделя:', baseWeek);
+                    commit('SET_BASE_WEEK_NUMBER', baseWeek);
+                    commit('SET_CURRENT_WEEK_NUMBER', baseWeek);
+                    commit('SET_CURRENT_WEEK_TYPE', `week${baseWeek}`);
                 }
+
+                // Вызываем как отдельный action
+                await dispatch('processScheduleData', { scheduleData, searchType: state.searchType });
 
             } catch (error) {
                 console.error('Ошибка загрузки расписания:', error);
@@ -457,6 +425,134 @@ export default createStore({
                 commit('SET_LOADING', false);
             }
         },
+
+        async processScheduleData({ commit }, { scheduleData, searchType }) {
+            const formatLessonTime = (number) => {
+                const times = {
+                    1: '08:00<br>09:30',
+                    2: '09:45<br>11:15',
+                    3: '11:30<br>13:00',
+                    4: '13:50<br>15:20',
+                    5: '15:35<br>17:05',
+                    6: '17:20<br>18:50',
+                    11: '08:00<br>09:30',
+                    12: '09:45<br>11:15',
+                    13: '11:30<br>13:00',
+                    14: '13:15<br>14:45',
+                    15: '15:00<br>16:30',
+                    16: '16:45<br>18:15'
+                };
+                return times[number] || '';
+            };
+
+            const transformedData = {
+                week1: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
+                week2: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
+            };
+
+            scheduleData.lessons.forEach(lesson => {
+                const weekType = `week${lesson.numberWeek}`;
+                const dayIndex = lesson.numberDay - 1;
+                let num = lesson.numberDay === 6 ? lesson.number + 10 : lesson.number;
+
+                const transformedLesson = {
+                    time: formatLessonTime(num),
+                    type: lesson.type,
+                    lesson: lesson.name,
+                    weekNumber: lesson.numberWeek
+                };
+
+                switch (searchType) {
+                    case 'group':
+                        transformedLesson.teachers = lesson.details || [];
+                        break;
+                    case 'teacher':
+                        transformedLesson.room = lesson.room || '';
+                        transformedLesson.details = lesson.details || [];
+                        break;
+                    case 'room':
+                        transformedLesson.details = lesson.details?.map(d => ({
+                            name: d.name,
+                            groups: d.groups || []
+                        })) || [];
+                        break;
+                }
+
+                transformedData[weekType][dayIndex].push(transformedLesson);
+            });
+
+            for (const weekType of ['week1', 'week2']) {
+                for (let dayIndex = 0; dayIndex < 6; dayIndex++) {
+                    commit('SET_WEEK_SCHEDULE', {
+                        weekType,
+                        dayIndex,
+                        schedule: transformedData[weekType][dayIndex] || []
+                    });
+                }
+            }
+        },
+
+
+
+        async fetchAllDataLists({ commit }) {
+            try {
+              // Тестовые данные пользователя (должны совпадать с ожидаемыми на сервере)
+              const userData = {
+                id: 123231,
+                firstname: "Юрий",
+                username: "frolovtg2005"
+              };
+          
+              // Исправленный эндпоинт
+              const response = await fetch(`http://${localhost}/api/users`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userData)
+              });
+          
+              if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Ошибка получения данных');
+              }
+          
+              const data = await response.json();
+              
+              // Проверяем структуру ответа (может быть data.user вместо data)
+              const responseData = data.user || data;
+              
+              if (!responseData) {
+                throw new Error('Неверная структура ответа сервера');
+              }
+          
+              // Выводим в консоль для отладки
+              console.log('Ответ сервера:', data);
+              console.log('Все группы:', responseData.groups || responseData.data?.groups);
+              console.log('Все преподаватели:', responseData.teachers || responseData.data?.teachers);
+              console.log('Все аудитории:', responseData.rooms || responseData.data?.rooms);
+          
+              // Сохраняем в хранилище
+              commit('SET_ALL_DATA_LISTS', {
+                groups: responseData.groups || responseData.data?.groups || [],
+                teachers: responseData.teachers || responseData.data?.teachers || [],
+                rooms: responseData.rooms || responseData.data?.rooms || []
+              });
+              
+              commit('SET_USER_NOTES', responseData.notes || []);
+          
+              return responseData;
+            } catch (error) {
+              console.error('Ошибка при загрузке списков:', error.message);
+              // Можно добавить отображение ошибки пользователю
+              commit('SET_ERROR', error.message);
+              throw error;
+            }
+          },
+
+
+
+
 
         setCurrentWeekType({ commit }, weekType) {
             commit('SET_CURRENT_WEEK_TYPE', weekType);
@@ -494,7 +590,7 @@ export default createStore({
         canNavigatePrev: state => state.currentWeekOffset > -2,
         canNavigateNext: state => state.currentWeekOffset < 2,
         currentWeekType: state => state.currentWeekType,
-        currentWeekSchedule: state => state.weeksData[state.currentWeekType] || {},
+        currentWeekSchedule: (state, getters) => state.weeksData[getters.currentWeekType] || {},
         currentWeekNumber: state => state.currentWeekNumber,
         currentGroup: state => state.currentGroup,
         searchType: state => state.searchType,
@@ -507,7 +603,12 @@ export default createStore({
             return absoluteOffset % 2 === 0 ? 'week1' : 'week2';
         },
         monthNames: state => state.monthNames,
-        fullWeekSchedule: (state, getters) => getters.currentWeekSchedule
+        fullWeekSchedule: (state, getters) => getters.currentWeekSchedule,
+
+        allGroups: state => state.allGroups,
+        allTeachers: state => state.allTeachers,
+        allRooms: state => state.allRooms,
+        userNotes: state => state.userNotes
     }
 })
 

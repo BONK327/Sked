@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const UserModel = require('../models/userModel');
 
 class UserRepository {
@@ -29,6 +30,27 @@ class UserRepository {
                 where: { id: userData.id}
             });
             return user;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    async findAllByTeacherIdAndGroupId(data) {
+        try {
+            const users = await UserModel.findAll({
+                attributes: [
+                    'id',
+                    'firstname'
+                ],
+                where: {
+                    [Op.or]: [
+                        {teacher_id: [...data.teachers]},
+                        {group_id: [...data.groups]}
+                    ]
+                },
+                raw: true
+            })
+            return users;
         } catch (error) {
             throw error;
         }

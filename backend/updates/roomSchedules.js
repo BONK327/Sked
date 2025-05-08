@@ -14,8 +14,7 @@ async function updateRoomSchedules() {
     const roomIds = (await roomRepository.findAll()).map(room => room.id);
     for (const roomId of roomIds) {
         const scheduleAPI = await apiService.fetchSchedule("Room", roomId);
-        const scheduleMiddle = converterSchedule.convertAPIRoomToMiddle(scheduleAPI);
-        const scheduleDB = converterSchedule.convertMiddleToDB(scheduleMiddle);
+        const scheduleDB = converterSchedule.convertAPIRoomToDB(scheduleAPI);
         await lessonService.createLessons(scheduleDB);
     }
 }

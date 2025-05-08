@@ -26,9 +26,7 @@ class GroupService {
                 };
             }
             const scheduleDB = await this.lessonRepository.findByGroup(group.id);
-            const scheduleMiddle = this.converterSchedule.convertDBToMiddle(scheduleDB);
-            const schedulePresent = this.converterSchedule.convertMiddleToPresentGroup(scheduleMiddle);
-            schedulePresent.name = group.name
+            const schedulePresent = this.converterSchedule.convertDBToPresentGroup(scheduleDB);
             return schedulePresent;
         } catch (error) {
             if (error.name == "NotFoundError") {

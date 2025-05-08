@@ -1,12 +1,26 @@
 <template>
-  <section class="search" :class="{'tg-theme': isTelegram, 'tg-dark': isDarkTheme}">
-    <input class="search__input" type="text" v-model="searchInput" placeholder="Группа, преподаватель, аудитория"
-      @keyup.enter="handleSearch">
+  <section class="search" :class="{ 'tg-theme': isTelegram, 'tg-dark': isDarkTheme }">
+    <input class="search__input" 
+           type="text" 
+           v-model="searchInput" 
+           @input="handleInput"
+           @blur="hideSuggestions"
+           placeholder="Группа, преподаватель, аудитория"
+           @keyup.enter="handleSearch"
+           @keydown.down="moveSelection(1)"
+           @keydown.up="moveSelection(-1)"
+           ref="searchInput">
     <transition name="fade">
       <div v-if="errorMessage" class="search-error">
         {{ errorMessage }}
       </div>
     </transition>
+    <div v-if="showSuggestions && suggestions.length > 0" class="suggestions">
+      <div v-for="(item, index) in suggestions" :key="item" class="suggestion-item"
+        :class="{ 'suggestion-active': index === activeSuggestionIndex }" @keyup.enter="handleEnter" @mousedown.prevent="selectSuggestion(item)">
+        {{ item }}
+      </div>
+    </div>
     <svg class="search__loupe btn" width="13" height="13" viewBox="0 0 13 13" fill="none"
       xmlns="http://www.w3.org/2000/svg" @click="handleSearch">
       <path fill-rule="evenodd" clip-rule="evenodd"
@@ -31,7 +45,9 @@ export default {
       // Telegram
       isTelegram: false,
       isDarkTheme: false,
-      tgThemeParams: {}
+      tgThemeParams: {},
+      showSuggestions: false,
+      activeSuggestionIndex: -1,
     }
   },
   created() {
@@ -44,26 +60,30 @@ export default {
       // Развернуть приложение на весь экран
       window.Telegram.WebApp.expand();
     }
+
+    this.$store.dispatch('fetchAllDataLists').catch(error => {
+      console.error('Ошибка загрузки списков:', error);
+    });
   },
   methods: {
     ...mapActions(['searchSchedule']),
     initTelegramTheme() {
       const WebApp = window.Telegram.WebApp;
-      
+
       // Получаем параметры темы
       this.tgThemeParams = WebApp.themeParams || {};
       this.isDarkTheme = WebApp.colorScheme === 'dark';
-      
+
       // Применяем тему
       this.applyTelegramTheme();
-      
+
       // Подписываемся на изменение темы
       WebApp.onEvent('themeChanged', this.applyTelegramTheme);
     },
     applyTelegramTheme() {
       const WebApp = window.Telegram.WebApp;
       this.isDarkTheme = WebApp.colorScheme === 'dark';
-      
+
       // Обновляем CSS-переменные
       document.documentElement.style.setProperty('--tg-bg-color', this.tgThemeParams.bg_color || '#ffffff');
       document.documentElement.style.setProperty('--tg-text-color', this.tgThemeParams.text_color || '#000000');
@@ -76,7 +96,7 @@ export default {
     },
     setupTelegramBackButton() {
       const WebApp = window.Telegram.WebApp;
-      
+
       // Показываем кнопку "Назад", если это необходимо
       WebApp.BackButton.show();
       WebApp.BackButton.onClick(() => {
@@ -84,6 +104,51 @@ export default {
         WebApp.close(); // или другая логика
       });
     },
+    selectTeacher(teacher) {
+      try {
+        if (!teacher || typeof teacher !== 'string') return;
+
+        this.searchInput = teacher;
+        this.showSuggestions = false;
+
+        this.$nextTick(() => {
+          if (this.$refs.searchInput) {
+            this.$refs.searchInput.focus();
+          }
+          this.handleSearch();
+        });
+      } catch (error) {
+        console.error('Ошибка при выборе преподавателя:', error);
+      }
+    },
+
+    getteacherSuggestions() {
+      return this.getTeacherSuggestions(this.searchInput);
+    },
+
+    onInput() {
+      if (this.searchInput.trim().length >= 3) {
+        this.showSuggestions = true;
+      } else {
+        this.showSuggestions = false;
+      }
+    },
+
+    hideSuggestions() {
+      // Небольшая задержка, чтобы можно было кликнуть на подсказку
+      setTimeout(() => {
+        this.showSuggestions = false;
+      }, 200);
+    },
+
+    handleEnter() {
+  if (this.activeSuggestionIndex >= 0 && this.suggestions.length) {
+    this.selectSuggestion(this.suggestions[this.activeSuggestionIndex]);
+  } else {
+    this.handleSearch();
+  }
+},
+
     // Форматируем группу (делаем буквы перед цифрами заглавными)
     formatGroupName(group) {
       if (!group) return group;
@@ -117,66 +182,91 @@ export default {
     },
 
     // Форматирование имени преподавателя для API (убираем точки)
-    formatTeacherForApi(name) {
-      if (!name) return '';
-      
-      // Удаляем точки и лишние пробелы
-      const cleaned = name.replace(/\./g, '').replace(/\s+/g, ' ').trim();
-      const parts = cleaned.split(' ');
-      
-      let result = parts[0]; // Фамилия
-      
-      // Добавляем первую букву имени
-      if (parts.length > 1) {
-        result += `_${parts[1][0]}`;
+    formatTeacherForApi(input) {
+      if (!input) return null;
+
+      // Нормализуем ввод
+      const normalizedInput = input.trim().toLowerCase()
+        .replace(/\./g, '') // Удаляем точки
+        .replace(/\s+/g, ' ') // Заменяем множественные пробелы
+        .replace(/-/g, ' '); // Заменяем дефисы на пробелы
+
+      const inputParts = normalizedInput.split(' ');
+      const allTeachers = this.$store.getters.allTeachers || [];
+
+      // Ищем всех преподавателей с подходящей фамилией
+      let candidates = allTeachers.filter(teacher => {
+        const teacherParts = teacher.toLowerCase().split(' ');
+        return teacherParts[0] === inputParts[0];
+      });
+
+      // Если ввели только фамилию
+      if (inputParts.length === 1) {
+        return candidates.length === 1
+          ? candidates[0].replace(/ /g, '_')
+          : null;
       }
-      
-      // Добавляем первую букву отчества
-      if (parts.length > 2) {
-        result += `_${parts[2][0]}`;
+
+      // Фильтруем по имени (первая буква)
+      if (inputParts.length > 1) {
+        candidates = candidates.filter(teacher => {
+          const teacherParts = teacher.toLowerCase().split(' ');
+          return teacherParts[1]?.charAt(0) === inputParts[1].charAt(0);
+        });
       }
-      
-      return result;
+
+      // Фильтруем по отчеству (первая буква)
+      if (inputParts.length > 2) {
+        candidates = candidates.filter(teacher => {
+          const teacherParts = teacher.toLowerCase().split(' ');
+          return teacherParts[2]?.charAt(0) === inputParts[2].charAt(0);
+        });
+      }
+
+      return candidates.length === 1
+        ? candidates[0].replace(/ /g, '_')
+        : null;
     },
 
     // Форматирование для отображения: "иванов иван" → "Иванов И."
     formatTeacherForDisplay(name) {
-      if (!name) return '';
-      
+      if (!name || typeof name !== 'string') return '';
+
+      // Удаляем точки и лишние пробелы
       const parts = name.replace(/\./g, '').replace(/\s+/g, ' ').trim().split(' ');
-      
+
       // Фамилия с большой буквы
       let result = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
-      
+
       // Инициал имени
-      if (parts.length > 1) {
-        result +=  `${parts[1][0].toUpperCase()}.`;
+      if (parts.length > 1 && parts[1]) {
+        result += ` ${parts[1].charAt(0).toUpperCase()}.`;
       }
-      
+
       // Инициал отчества
-      if (parts.length > 2) {
-        result +=  `${parts[2][0].toUpperCase()}.`;
+      if (parts.length > 2 && parts[2]) {
+        result += ` ${parts[2].charAt(0).toUpperCase()}.`;
       }
-      
+
       return result;
     },
 
     // Основное определение типа поиска
     determineSearchType(query) {
       query = query.trim();
-      
+
       // 1. Специальные аудитории
       if (this.isSpecialRoom(query)) return 'room';
-      
+
       // 2. Аудитории с пробелом
       if (this.isRoomWithSpace(query)) return 'room';
-      
+
       // 3. Стандартные аудитории
       if (this.isStandardRoom(query)) return 'room';
-      
+
       // 4. Группы (буквы + цифры)
       if (/^[а-яё]+\d+$/i.test(query)) return 'group';
-      
+
       // 5. Всё остальное - преподаватель
       return 'teacher';
     },
@@ -186,48 +276,272 @@ export default {
       query = query.trim();
       if (!query) return null;
 
+      // Проверяем, загружены ли списки
+      const listsLoaded = this.$store.getters.allGroups &&
+        this.$store.getters.allTeachers &&
+        this.$store.getters.allRooms;
+
+      if (!listsLoaded) {
+        console.error('Списки данных не загружены');
+        return null;
+      }
+
       const type = this.determineSearchType(query);
-      
-      // Разрешаем точки для преподавателей
+
+      // Дополнительная валидация для преподавателей
       if (type === 'teacher' && !/^[а-яё\s\-\.]+$/i.test(query)) {
         return null;
       }
-      
+
       return type;
     },
 
-    handleSearch() {
+    async handleSearch() {
+
+
+
+      console.log('Поиск:', {
+        input: this.searchInput,
+        type: this.validateInput(this.searchInput),
+        allTeachers: this.$store.getters.allTeachers,
+        apiFormat: this.formatTeacherForApi(this.searchInput)
+      });
+
+      if (this.activeSuggestionIndex >= 0 && this.suggestions.length) {
+        this.searchInput = this.suggestions[this.activeSuggestionIndex];
+      }
+
       const query = this.searchInput.trim();
       if (!query) return;
 
       const type = this.validateInput(query);
-
       if (!type) {
         this.errorMessage = 'Введите: группу (ПИ2303), преподавателя (Иванов) или аудиторию (405эк)';
         setTimeout(() => this.errorMessage = '', 3000);
         return;
       }
 
-      let searchQuery = query;
-      
-      if (type === 'group') {
-        const firstDigit = query.search(/\d/);
-        searchQuery = firstDigit === -1 
-          ? query.toUpperCase() 
-          : query.slice(0, firstDigit).toUpperCase() + query.slice(firstDigit);
+      try {
+        if (type === 'teacher') {
+          const apiQuery = this.formatTeacherForApi(query);
+          const allTeachers = this.$store.getters.allTeachers || [];
+
+          if (apiQuery === null) {
+            const suggestions = this.getTeacherSuggestions(query);
+            this.errorMessage = suggestions.length
+              ? `Уточните преподавателя: ${suggestions.join(', ')}`
+              : 'Найдено несколько преподавателей с такой фамилией. Уточните имя.';
+            setTimeout(() => this.errorMessage = '', 5000);
+            return;
+          }
+
+          if (!apiQuery) {
+            this.errorMessage = 'Преподаватель не найден';
+            setTimeout(() => this.errorMessage = '', 3000);
+            return;
+          }
+
+          // Проверяем существование в списке
+          const exists = allTeachers.some(t =>
+            t.replace(/ /g, '_').toLowerCase() === apiQuery.toLowerCase()
+          );
+
+          if (!exists) {
+            this.errorMessage = `Преподаватель ${this.formatTeacherForDisplay(apiQuery.replace(/_/g, ' '))} не найден`;
+            setTimeout(() => this.errorMessage = '', 3000);
+            return;
+          }
+
+          await this.$store.dispatch('searchSchedule', {
+            type,
+            query: apiQuery,
+            displayQuery: this.formatTeacherForDisplay(apiQuery.replace(/_/g, ' '))
+          });
+          return;
+        } else {
+          // Логика для групп и аудиторий
+          const list = type === 'group'
+            ? this.$store.getters.allGroups || []
+            : this.$store.getters.allRooms || [];
+
+          const exists = list.some(item =>
+            item.toLowerCase() === query.toLowerCase()
+          );
+
+          if (!exists) {
+            this.errorMessage = `${this.getTypeName(type)} "${query}" не найден(а)`;
+            setTimeout(() => this.errorMessage = '', 3000);
+            return;
+          }
+
+          await this.$store.dispatch('searchSchedule', {
+            type,
+            query,
+            displayQuery: query
+          });
+        }
+      } catch (error) {
+        console.error('Ошибка поиска:', error);
+        this.errorMessage = 'Ошибка при загрузке расписания';
+        setTimeout(() => this.errorMessage = '', 3000);
+      } finally {
+        this.showSuggestions = false;
       }
-      // Обработка преподавателей
-      else if (type === 'teacher') {
-        this.searchSchedule({
-          type,
-          query: this.formatTeacherForApi(query), // Для API
-          displayQuery: this.formatTeacherForDisplay(query) // Для отображения
-        });
-        return;
+    },
+
+    formatSearchQuery(type, query) {
+      if (type !== 'teacher') return query;
+
+      // Приводим к формату "Фамилия И О"
+      const parts = query.split(' ');
+      let formatted = parts[0]; // Фамилия
+
+      if (parts.length > 1) {
+        formatted += ` ${parts[1][0].toUpperCase()}.`; // Инициал имени
       }
 
-      this.errorMessage = '';
-      this.searchSchedule({ type, query });
+      if (parts.length > 2) {
+        formatted += ` ${parts[2][0].toUpperCase()}.`; // Инициал отчества
+      }
+
+      return formatted;
+    },
+
+    getTypeName(type) {
+      const names = {
+        group: 'Группа',
+        teacher: 'Преподаватель',
+        room: 'Аудитория'
+      };
+      return names[type] || '';
+    },
+
+    async checkIfExists(type, query) {
+      if (type !== 'teacher') {
+        const list = this.$store.getters[`all${type.charAt(0).toUpperCase() + type.slice(1)}`] || [];
+        return list.some(item => item.toLowerCase() === query.toLowerCase());
+      }
+
+      const apiFormat = this.formatTeacherForApi(query);
+      if (!apiFormat) return false;
+
+      const allTeachers = this.$store.getters.allTeachers || [];
+      return allTeachers.some(t => {
+        const teacherApiFormat = t.replace(/ /g, '_').toLowerCase();
+        return teacherApiFormat === apiFormat.toLowerCase();
+      });
+    },
+    getTeacherSuggestions(input) {
+      // Добавляем проверку на undefined и null
+      if (!input || typeof input.trim !== 'function') return [];
+
+      const query = input.trim();
+      if (query.length < 3) return [];
+
+      const allTeachers = this.$store.getters.allTeachers || [];
+      if (!allTeachers.length) return [];
+
+      const queryLower = query.toLowerCase();
+      const queryParts = queryLower.split(' ');
+
+      return allTeachers.filter(teacher => {
+        if (!teacher || typeof teacher !== 'string') return false;
+
+        const teacherLower = teacher.toLowerCase();
+        const teacherParts = teacherLower.split(' ');
+
+        // Проверяем совпадение фамилии
+        if (!teacherParts[0]?.includes(queryParts[0])) return false;
+
+        // Проверяем совпадение инициалов имени
+        if (queryParts.length > 1 && teacherParts[1]) {
+          return teacherParts[1].startsWith(queryParts[1].charAt(0));
+        }
+
+        return true;
+      }).slice(0, 5);
+    },
+    getSuggestions(input) {
+      if (!input || input.trim().length < 3) return []; // Показываем после 2 символов
+
+      const type = this.determineSearchType(input);
+      const searchLower = input.toLowerCase();
+
+      switch (type) {
+        case 'teacher':
+          const allTeachers = this.$store.getters.allTeachers || [];
+          return allTeachers
+            .filter(teacher => teacher.toLowerCase().includes(searchLower))
+            .slice(0, 5);
+
+        case 'group':
+          const allGroups = this.$store.getters.allGroups || [];
+          return allGroups
+            .filter(group => group.toLowerCase().includes(searchLower))
+            .slice(0, 5);
+
+        case 'room':
+          const allRooms = this.$store.getters.allRooms || [];
+          return allRooms
+            .filter(room => room.toLowerCase().includes(searchLower))
+            .slice(0, 5);
+
+        default:
+          return [];
+      }
+    },
+
+    // Выбор подсказки
+    selectSuggestion(item) {
+      this.searchInput = item;
+      this.showSuggestions = false;
+      this.activeSuggestionIndex = -1;
+      this.handleSearch();
+    },
+
+    // Навигация по подсказкам клавиатурой
+    moveSelection(direction) {
+      if (!this.showSuggestions) return;
+
+      const newIndex = this.activeSuggestionIndex + direction;
+      if (newIndex >= 0 && newIndex < this.suggestions.length) {
+        this.activeSuggestionIndex = newIndex;
+      }
+
+      // Автопрокрутка списка
+      const suggestionElements = this.$el.querySelectorAll('.suggestion-item');
+      if (suggestionElements[newIndex]) {
+        suggestionElements[newIndex].scrollIntoView({
+          block: 'nearest',
+          behavior: 'smooth'
+        });
+      }
+    },
+
+    // Обработка ввода
+    handleInput() {
+      if (this.searchInput && this.searchInput.trim().length >= 2) {
+        this.showSuggestions = true;
+        this.activeSuggestionIndex = -1;
+      } else {
+        this.showSuggestions = false;
+      }
+    },
+
+
+
+  },
+  computed: {
+    suggestions() {
+      return this.getSuggestions(this.searchInput);
+    },
+    teacherSuggestions() {
+      try {
+        return this.searchInput ? this.getTeacherSuggestions(this.searchInput) : [];
+      } catch (error) {
+        console.error('Ошибка получения подсказок:', error);
+        return [];
+      }
     }
   }
 }
@@ -236,6 +550,7 @@ export default {
 <style lang="sass" scoped>
 @import "@/assets/styles/variables.sass"
 @import "@/assets/styles/mixins.sass"
+
 
 .search-error
   position: absolute

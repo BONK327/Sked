@@ -1,8 +1,8 @@
 <template>
-  <div class="schedule" :class="{'tg-theme': isTelegram}" :data-theme="isDarkTheme ? 'dark' : 'light'">
+  <div class="schedule" :class="{ 'tg-theme': isTelegram }" :data-theme="isDarkTheme ? 'dark' : 'light'">
     <!-- Preloader показывается до загрузки данных -->
     <Preloader v-if="isLoading" :isTelegram="isTelegram" :isDark="isDarkTheme" />
-    
+
     <div v-else class="container">
       <div class="grid">
         <keep-alive>
@@ -10,10 +10,10 @@
         </keep-alive>
       </div>
     </div>
-    
+
     <AddNoteModal />
     <NoteDialog />
-    <Footer/>
+    <Footer />
   </div>
 </template>
 
@@ -61,7 +61,7 @@ export default {
 
     // Фиксированная задержка 2 секунды
     const fixedDelay = new Promise(resolve => setTimeout(resolve, 2000));
-    
+
     // Ваши текущие асинхронные операции
     const dataLoading = (async () => {
       const today = new Date();
@@ -70,6 +70,9 @@ export default {
 
       await Promise.all([
         this.$store.dispatch('initWeekNumber'),
+        this.$store.dispatch('fetchAllDataLists').catch(() => {
+          console.log('Не удалось загрузить списки, но приложение продолжит работу');
+        }),
         this.$store.dispatch('fetchFullWeekSchedule', {
           fullDayName: dayNames[today.getDay()],
           date: today.getDate(),

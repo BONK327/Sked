@@ -26,12 +26,18 @@ class TeacherService {
                 }
             }
             const scheduleDB = await this.lessonRepository.findByTeacher(teacher.id);
-            const scheduleMiddle = this.converterSchedule.convertDBToMiddle(scheduleDB);
-            const schedulePresent = this.converterSchedule.convertMiddleToPresentTeacher(scheduleMiddle);
+            if (scheduleDB.length === 0)
+                throw {
+                    name: "ForbiddenError",
+                    message: `Teacher '${shortname}' forbidden`
+                }
+            const schedulePresent = this.converterSchedule.convertDBToPresentTeacher(scheduleDB);
             schedulePresent.name = teacher.shortname
             return schedulePresent;
         } catch (error) {
             if (error.name == "NotFoundError") {
+                throw error
+            } else if (error.name == "ForbiddenError") {
                 throw error
             } else {
                 throw {

@@ -1,12 +1,12 @@
 <template>
-  <div class="full-schedule-modal" @click.self="closeModal" :class="{'tg-theme': isTelegram, 'tg-dark': isDarkTheme}">
+  <div class="full-schedule-modal" @click.self="closeModal" :class="{ 'tg-theme': isTelegram, 'tg-dark': isDarkTheme }">
     <div class="modal-content">
       <div class="modal-header">
         <h2 class="table__title">Расписание на неделю (Неделя {{ currentWeekNumber }})</h2>
         <button class="close-btn" @click="closeModal">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M18 6L6 18M6 6L18 18" :stroke="isTelegram ? 'var(--tg-button-text-color)' : '#FFFFFF'" stroke-width="2" stroke-linecap="round"
-              stroke-linejoin="round" />
+            <path d="M18 6L6 18M6 6L18 18" :stroke="isTelegram ? 'var(--tg-button-text-color)' : '#FFFFFF'"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </button>
       </div>
@@ -91,25 +91,25 @@ export default {
   },
   methods: {
     ...mapActions(['fetchFullWeekSchedule']),
-    
+
     initTelegramTheme() {
       const WebApp = window.Telegram.WebApp;
-      
+
       // Получаем параметры темы
       this.tgThemeParams = WebApp.themeParams || {};
       this.isDarkTheme = WebApp.colorScheme === 'dark';
-      
+
       // Применяем тему
       this.applyTelegramTheme();
-      
+
       // Подписываемся на изменение темы
       WebApp.onEvent('themeChanged', this.applyTelegramTheme);
     },
-    
+
     applyTelegramTheme() {
       const WebApp = window.Telegram.WebApp;
       this.isDarkTheme = WebApp.colorScheme === 'dark';
-      
+
       // Обновляем CSS-переменные
       document.documentElement.style.setProperty('--tg-bg-color', this.tgThemeParams.bg_color || '#ffffff');
       document.documentElement.style.setProperty('--tg-text-color', this.tgThemeParams.text_color || '#000000');
@@ -186,13 +186,13 @@ export default {
 
       // Сначала собираем всех уникальных преподавателей
       const uniqueTeachers = new Map()
-      
+
       items.forEach(item => {
         const teacherName = item.name || item.teacher || ''
         if (!teacherName) return
-        
+
         const subgroup = item.subgroup || (item.groups?.[0]?.subgroup) || ''
-        
+
         if (!uniqueTeachers.has(teacherName)) {
           uniqueTeachers.set(teacherName, new Set())
         }
@@ -200,7 +200,7 @@ export default {
           uniqueTeachers.get(teacherName).add(subgroup)
         }
       })
-      
+
       // Формируем строку для каждого преподавателя
       const result = []
       uniqueTeachers.forEach((subgroups, teacherName) => {
@@ -208,14 +208,14 @@ export default {
         const shortName = nameParts[0] + ' ' +
           (nameParts[1] ? nameParts[1][0] + '.' : '') +
           (nameParts[2] ? nameParts[2][0] + '.' : '')
-        
+
         if (subgroups.size > 0) {
-          result.push(`${shortName}(${[...subgroups].join(',')})`)
+          result.push(`${teacherName}(${[...subgroups].join(',')})`)
         } else {
-          result.push(shortName)
+          result.push(teacherName)
         }
       })
-      
+
       return result.join('<br>')
     },
 
@@ -241,49 +241,57 @@ export default {
     },
 
     formatRoomsWithSubgroups(items) {
-      if (!items) return ''
-      
+      if (!items) return '';
+
       // Собираем все уникальные аудитории
-      const roomMap = new Map()
-      
+      const roomMap = new Map();
+
       items.forEach(item => {
         if (item.room) {
           if (!roomMap.has(item.room)) {
-            roomMap.set(item.room, new Set())
+            roomMap.set(item.room, new Set());
           }
           if (item.subgroup) {
-            roomMap.get(item.room).add(item.subgroup)
+            roomMap.get(item.room).add(item.subgroup);
           }
         }
-      })
-      
+      });
+
       // Формируем строки для аудиторий
-      const result = []
+      const result = [];
       roomMap.forEach((subgroups, room) => {
+        // Добавляем подгруппы только если они не охватывают все возможные
         if (subgroups.size > 0) {
-          result.push(`${room}(${[...subgroups].join(',')})`)
+          // Проверяем, есть ли все подгруппы (1 и 2)
+          const hasAllSubgroups = subgroups.has(1) && subgroups.has(2);
+          result.push(hasAllSubgroups ? room : `${room}(${[...subgroups].join(',')})`);
         } else {
-          result.push(room)
+          result.push(room);
         }
-      })
-      
-      return result.join('<br>')
+      });
+
+      return result.join('<br>');
     }
   },
   async created() {
-    // Проверяем, открыто ли приложение в Telegram
     if (window.Telegram && window.Telegram.WebApp) {
       this.isTelegram = true;
       this.initTelegramTheme();
     }
-    
-    this.isLoading = true
+
+    this.isLoading = true;
     try {
-      await this.fetchFullWeekSchedule()
+      // Проверяем, есть ли уже загруженные данные
+      const hasData = Object.values(this.currentWeekSchedule).some(day => day.length > 0);
+
+      // Загружаем только если данных нет
+      if (!hasData) {
+        await this.fetchFullWeekSchedule();
+      }
     } catch (error) {
-      console.error('Ошибка загрузки расписания:', error)
+      console.error('Ошибка загрузки расписания:', error);
     } finally {
-      this.isLoading = false
+      this.isLoading = false;
     }
   }
 }
