@@ -63,6 +63,7 @@ export default {
   justify-content: space-between
   gap: 1rem
   max-height: 3rem
+  margin-bottom: 5rem
 
 .btn
   position: relative

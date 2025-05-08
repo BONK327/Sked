@@ -130,9 +130,9 @@ html
   background-color: var(--tg-bg-color)
   height: 100%
   @include respond(big-screen)
-    font-size: 87.5%
+    font-size: 82.5%
   @include respond(computer)
-    font-size: 82.5
+    font-size: 80%
   @include respond(tab-lend)
     font-size: 80%
   @include respond(tab-port)
