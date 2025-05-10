@@ -300,12 +300,12 @@ export default {
 
 
 
-      console.log('Поиск:', {
-        input: this.searchInput,
-        type: this.validateInput(this.searchInput),
-        allTeachers: this.$store.getters.allTeachers,
-        apiFormat: this.formatTeacherForApi(this.searchInput)
-      });
+      // console.log('Поиск:', {
+      //   input: this.searchInput,
+      //   type: this.validateInput(this.searchInput),
+      //   allTeachers: this.$store.getters.allTeachers,
+      //   apiFormat: this.formatTeacherForApi(this.searchInput)
+      // });
 
       if (this.activeSuggestionIndex >= 0 && this.suggestions.length) {
         this.searchInput = this.suggestions[this.activeSuggestionIndex];

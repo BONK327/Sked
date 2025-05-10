@@ -1,5 +1,5 @@
 <template>
-  <tr class="table__content-row" :class="{'tg-theme': isTelegram}" :data-theme="isDarkTheme ? 'dark' : 'light'">
+  <tr class="table__content-row" :class="{ 'tg-theme': isTelegram }" :data-theme="isDarkTheme ? 'dark' : 'light'">
     <td class="table__content-row-time" v-html="row.time"></td>
     <td :class="['table__content-row-color', `table__content-row-color--${row.type}`]"></td>
     <td class="table__content-row-lesson">
@@ -55,12 +55,32 @@ export default {
     },
 
     hasNote() {
-      const selectedDate = this.selectedDay?.originalDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
-      return this.getNotes.some(note =>
-        note.lesson === this.row.lesson &&
-        note.time === this.row.time &&
-        note.date === selectedDate
-      )
+      const notes = this.$store.getters.allNotes || [];
+      const selectedDate = this.selectedDay?.originalDate?.toISOString().split('T')[0] ||
+        new Date().toISOString().split('T')[0];
+
+      return notes.some(note => {
+        const noteDate = note.date || '';
+        const noteTime = note.time || '';
+
+        // Для серверных заметок проверяем по номеру недели/дня/пары
+        if (note.source === 'server') {
+          const pos = this.$store.getters.getLessonPosition(note);
+          const currentPos = this.$store.getters.getLessonPosition({
+            date: selectedDate,
+            time: this.row.time
+          });
+
+          return pos.numberWeek === currentPos.numberWeek &&
+            pos.numberDay === currentPos.numberDay &&
+            pos.number === currentPos.number;
+        }
+
+        // Для локальных - полное сравнение
+        return note.date === selectedDate &&
+          note.time === this.row.time &&
+          note.lesson === this.row.lesson;
+      });
     },
 
     displayTeachers() {
@@ -107,7 +127,7 @@ export default {
       }
       return '';
     },
-    
+
     displayMainDetails() {
       switch (this.searchType) {
         case 'group':
@@ -145,17 +165,17 @@ export default {
   methods: {
     initTelegramTheme() {
       const WebApp = window.Telegram.WebApp;
-      
+
       this.tgThemeParams = WebApp.themeParams || {};
       this.isDarkTheme = WebApp.colorScheme === 'dark';
       this.applyTelegramTheme();
       WebApp.onEvent('themeChanged', this.applyTelegramTheme);
     },
-    
+
     applyTelegramTheme() {
       const WebApp = window.Telegram.WebApp;
       this.isDarkTheme = WebApp.colorScheme === 'dark';
-      
+
       // Обновляем CSS-переменные
       document.documentElement.style.setProperty('--app-bg-color', this.tgThemeParams.bg_color || (this.isDarkTheme ? '#212529' : '#ffffff'));
       document.documentElement.style.setProperty('--app-text-color', this.tgThemeParams.text_color || (this.isDarkTheme ? '#ffffff' : '#1E1E1E'));
@@ -167,50 +187,103 @@ export default {
 
     handleNoteClick(e) {
       if (!this.isLessonExists) {
+        //console.log('Нет урока - игнорируем клик');
         e.preventDefault()
         e.stopPropagation()
         return
       }
-      
+
       e.preventDefault()
       e.stopPropagation()
 
-      const selectedDate = this.selectedDay?.originalDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
-      const note = this.getNotes.find(note =>
-        note.lesson === this.row.lesson &&
-        note.time === this.row.time &&
-        note.date === selectedDate
-      )
+      const selectedDate = this.selectedDay?.originalDate?.toISOString().split('T')[0] ||
+        new Date().toISOString().split('T')[0];
 
-      if (note) {
-        this.$store.dispatch('openNoteDialog', note.id)
+      // console.log('--- Клик по заметке ---');
+      // console.log('Текущая дата:', selectedDate);
+      // console.log('Время пары:', this.row.time);
+      // console.log('Название пары:', this.row.lesson);
+      // console.log('Тип поиска:', this.searchType);
+      // console.log('Данные пары:', this.row);
+
+      // Получаем все заметки
+      const allNotes = this.$store.getters.allNotes || [];
+      // console.log('Всего заметок:', allNotes.length);
+      // console.log('Все заметки:', allNotes);
+
+      // Находим соответствующую заметку
+      const noteData = allNotes.find(n => {
+        if (n.source === 'server') {
+          const notePos = this.$store.getters.getLessonPosition(n);
+          const currentPos = this.$store.getters.getLessonPosition({
+            date: selectedDate,
+            time: this.row.time,
+            lesson: this.row.lesson
+          });
+
+          // console.log('Сравнение серверной заметки:', {
+          //   notePos,
+          //   currentPos,
+          //   match: notePos.numberWeek === currentPos.numberWeek &&
+          //     notePos.numberDay === currentPos.numberDay &&
+          //     notePos.number === currentPos.number
+          // });
+
+          return notePos.numberWeek === currentPos.numberWeek &&
+            notePos.numberDay === currentPos.numberDay &&
+            notePos.number === currentPos.number;
+        } else {
+          const noteDate = new Date(n.date).toISOString().split('T')[0];
+          const match = noteDate === selectedDate &&
+            n.time === this.row.time &&
+            n.lesson === this.row.lesson;
+
+          // console.log('Сравнение локальной заметки:', {
+          //   noteDate,
+          //   selectedDate,
+          //   noteTime: n.time,
+          //   rowTime: this.row.time,
+          //   noteLesson: n.lesson,
+          //   rowLesson: this.row.lesson,
+          //   match
+          // });
+
+          return match;
+        }
+      });
+
+      if (noteData?.id) {
+        //console.log('Найдена заметка:', noteData);
+        this.$store.dispatch('openNoteDialog', noteData.id.toString());
+      } else {
+        console.error('Не удалось получить ID заметки');
       }
     },
-    
+
     formatTeachersWithSubgroups(items) {
       if (!items || !items.length) return '';
-      
+
       return items.map(item => {
         // Для поиска по аудиториям структура данных другая
         const teacherName = item.name || item.teacher || '';
-        const subgroup = item.subgroup || 
-                        (item.groups?.[0]?.subgroup) || 
-                        '';
-        
+        const subgroup = item.subgroup ||
+          (item.groups?.[0]?.subgroup) ||
+          '';
+
         if (!teacherName) return '';
-        
+
         const nameParts = teacherName.split(' ');
-        const shortName = nameParts[0] + ' ' + 
-                         (nameParts[1] ? nameParts[1][0] + '.' : '') + 
-                         (nameParts[2] ? nameParts[2][0] + '.' : '');
-        
+        const shortName = nameParts[0] + ' ' +
+          (nameParts[1] ? nameParts[1][0] + '.' : '') +
+          (nameParts[2] ? nameParts[2][0] + '.' : '');
+
         return subgroup ? `${teacherName}(${subgroup})` : teacherName;
       }).filter(Boolean).join('<br>');
     },
 
     formatGroupsWithSubgroups(groups) {
       if (!groups) return '';
-      
+
       if (this.searchType === 'room') {
         // Для аудиторий: только базовые группы без подгрупп
         const uniqueGroups = new Set();
@@ -223,7 +296,7 @@ export default {
         });
         return [...uniqueGroups].join('<br>');
       }
-      
+
       // Для других типов поиска оставляем как было
       return groups.map(g => {
         let str = g.group;

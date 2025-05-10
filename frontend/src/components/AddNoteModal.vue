@@ -1,19 +1,16 @@
 <template>
   <transition name="fade">
-    <div :class="{'tg-theme': isTelegram}" :data-theme="isDarkTheme ? 'dark' : 'light'" v-if="isOpen" class="modal-overlay" @click.self="closeModal">
+    <div :class="{ 'tg-theme': isTelegram }" :data-theme="isDarkTheme ? 'dark' : 'light'" v-if="isOpen"
+      class="modal-overlay" @click.self="closeModal">
       <div class="modal">
         <div class="modal-header">
           <h3>Выберите пару для заметки</h3>
           <button @click="closeModal" class="close-btn">&times;</button>
         </div>
         <div class="modal-content">
-          <div
-              v-for="lesson in todaysLessons"
-              :key="lesson.time"
-              class="lesson-item"
-              :class="{ 'lesson-item--has-note': hasNoteForLesson(lesson) }"
-              @click="!hasNoteForLesson(lesson) && handleAddNote(lesson)"
-          >
+          <div v-for="lesson in todaysLessons" :key="lesson.time" class="lesson-item"
+            :class="{ 'lesson-item--has-note': hasNoteForLesson(lesson) }"
+            @click="!hasNoteForLesson(lesson) && handleAddNote(lesson)">
             <div class="lesson-time" v-html="lesson.time"></div>
             <div class="lesson-title">{{ lesson.lesson }}</div>
             <div class="lesson-teacher">{{ lesson.teacher }}</div>
@@ -43,7 +40,7 @@ export default {
     }
   },
   computed: {
-    ...mapGetters(['isAddNoteModalOpen', 'availableLessons', 'getNotes', 'selectedDay', 'currentWeekSchedule', 'selectedDayIndex']),
+    ...mapGetters(['isAddNoteModalOpen', 'availableLessons', 'allNotes', 'selectedDay', 'currentWeekSchedule', 'selectedDayIndex']),
     isOpen() {
       return this.isAddNoteModalOpen
     },
@@ -86,24 +83,33 @@ export default {
       this.closeAddNoteModal()
     },
     hasNoteForLesson(lesson) {
-      return this.getNotes.some(note =>
-          note.date === this.selectedDate &&
-          note.lesson === lesson.lesson &&
-          note.time === lesson.time
-      )
+      if (!this.allNotes) return false;
+      return this.allNotes.some(note =>
+        note.date === this.selectedDate &&
+        note.time === lesson.time &&
+        (note.source === 'local' || note.lesson === lesson.lesson)
+      );
     },
-    handleAddNote(lesson) {
-      const newNote = {
-        id: Date.now(),
-        lesson: lesson.lesson,
-        time: lesson.time,
-        teacher: lesson.teacher,
-        room: lesson.room,
-        content: '',
-        date: this.selectedDate
+    async handleAddNote(lesson) {
+      try {
+        //console.log('Добавление заметки для:', lesson);
+
+        const newNote = {
+          id: Date.now(),
+          lesson: lesson.lesson,
+          time: lesson.time,
+          content: '',
+          date: this.selectedDate,
+          teacher: lesson.teacher || '',
+          room: lesson.room || ''
+        };
+
+        await this.$store.dispatch('addNote', newNote);
+        this.closeModal();
+      } catch (error) {
+        console.error('Ошибка добавления заметки:', error);
+        // Показать пользователю сообщение об ошибке
       }
-      this.addNote(newNote)
-      this.closeModal()
     }
   }
 }

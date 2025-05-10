@@ -1,4 +1,5 @@
 import { createStore } from 'vuex'
+import { convertNumberToTime, convertToDate, getNumberFromTime } from '../components/utils/notes';
 
 //const localhost = "0n3jzfgz-3000.inc1.devtunnels.ms";
 const localhost = "localhost:3000";
@@ -56,7 +57,9 @@ export default createStore({
         allGroups: [],
         allTeachers: [],
         allRooms: [],
-        userNotes: []
+        userNotes: [],
+        userId: 123231, // Временный ID, позже заменим на Telegram ID
+        serverNotes: [] // Заметки из БД
 
 
     },
@@ -117,8 +120,13 @@ export default createStore({
         },
         // Добавляем новые мутации для управления диалогом
         OPEN_NOTE_DIALOG(state, payload) {
-            state.noteDialog.isOpen = true
-            state.noteDialog.noteId = payload.noteId
+            // Принимаем как строку или объект
+            const noteId = typeof payload === 'object' ? payload.noteId : payload;
+            state.noteDialog.isOpen = true;
+            state.noteDialog.noteId = {
+                noteId: String(noteId), // Гарантируем строковый ID в объекте
+                forceUpdate: Date.now() // Добавляем метку времени для принудительного обновления
+            };
         },
         CLOSE_NOTE_DIALOG(state) {
             state.noteDialog.isOpen = false
@@ -167,14 +175,14 @@ export default createStore({
         SET_CURRENT_TEACHER(state, payload) {
             // payload может быть строкой или объектом { query, displayQuery }
             if (typeof payload === 'object') {
-              state.currentTeacher = payload.displayQuery;
-              state.teacherApiQuery = payload.query; // Сохраняем API-формат
+                state.currentTeacher = payload.displayQuery;
+                state.teacherApiQuery = payload.query; // Сохраняем API-формат
             } else {
-              state.currentTeacher = payload;
-              state.teacherApiQuery = payload.replace(/ /g, '_');
+                state.currentTeacher = payload;
+                state.teacherApiQuery = payload.replace(/ /g, '_');
             }
             state.searchType = 'teacher';
-          },
+        },
         SET_CURRENT_ROOM(state, room) {
             state.currentRoom = room
             state.searchType = 'room'
@@ -193,7 +201,18 @@ export default createStore({
         SET_USER_NOTES(state, notes) {
             state.userNotes = notes || [];
         },
-        
+        SET_SERVER_NOTES(state, notes) {
+            state.serverNotes = notes;
+        },
+        SET_USER_ID(state, id) {
+            state.userId = id;
+        },
+        OPEN_NOTE_DIALOG(state, noteId) {
+            state.noteDialog.isOpen = true;
+            state.noteDialog.noteId = noteId;
+            state.noteDialog.forceUpdate = Date.now(); // Добавляем триггер для обновления
+        }
+
 
 
 
@@ -397,7 +416,7 @@ export default createStore({
                 if (!response.ok) throw new Error('Ошибка загрузки расписания');
 
                 const scheduleData = await response.json();
-                console.log('Получены данные расписания:', scheduleData);
+                //console.log('Получены данные расписания:', scheduleData);
 
                 if (!state.baseWeekNumber) {
                     const calculatedWeek = getAcademicWeekNumber();
@@ -496,59 +515,213 @@ export default createStore({
 
         async fetchAllDataLists({ commit }) {
             try {
-              // Тестовые данные пользователя (должны совпадать с ожидаемыми на сервере)
-              const userData = {
-                id: 123231,
-                firstname: "Юрий",
-                username: "frolovtg2005"
-              };
-          
-              // Исправленный эндпоинт
-              const response = await fetch(`http://${localhost}/api/users`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(userData)
-              });
-          
-              if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || 'Ошибка получения данных');
-              }
-          
-              const data = await response.json();
-              
-              // Проверяем структуру ответа (может быть data.user вместо data)
-              const responseData = data.user || data;
-              
-              if (!responseData) {
-                throw new Error('Неверная структура ответа сервера');
-              }
-          
-              // Выводим в консоль для отладки
-              console.log('Ответ сервера:', data);
-              console.log('Все группы:', responseData.groups || responseData.data?.groups);
-              console.log('Все преподаватели:', responseData.teachers || responseData.data?.teachers);
-              console.log('Все аудитории:', responseData.rooms || responseData.data?.rooms);
-          
-              // Сохраняем в хранилище
-              commit('SET_ALL_DATA_LISTS', {
-                groups: responseData.groups || responseData.data?.groups || [],
-                teachers: responseData.teachers || responseData.data?.teachers || [],
-                rooms: responseData.rooms || responseData.data?.rooms || []
-              });
-              
-              commit('SET_USER_NOTES', responseData.notes || []);
-          
-              return responseData;
+                const response = await fetch(`http://localhost:3000/api/users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: 123231,
+                        firstname: "Test",
+                        username: "testuser"
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Получены данные с сервера:', data); // Добавим лог для отладки
+
+                // Проверяем наличие notes в ответе
+                if (!data.notes) {
+                    console.warn('Сервер не вернул заметки в ответе');
+                    data.notes = [];
+                }
+
+                commit('SET_ALL_DATA_LISTS', {
+                    groups: data.data?.groups || [],
+                    teachers: data.data?.teachers || [],
+                    rooms: data.data?.rooms || []
+                });
+
+                commit('SET_SERVER_NOTES', data.notes);
+
+                return data;
             } catch (error) {
-              console.error('Ошибка при загрузке списков:', error.message);
-              // Можно добавить отображение ошибки пользователю
-              commit('SET_ERROR', error.message);
-              throw error;
+                console.error('Ошибка загрузки данных:', error);
+                commit('SET_ERROR', 'Не удалось загрузить данные с сервера');
+                return {
+                    groups: [],
+                    teachers: [],
+                    rooms: [],
+                    notes: []
+                };
             }
-          },
+        },
+
+
+
+
+
+
+
+
+
+
+
+
+        async syncNoteToServer({ state }, { numWeek, numDay, num, text }) {
+            try {
+                // Валидация параметров
+                if (isNaN(numWeek)) numWeek = 1;
+                if (isNaN(numDay)) numDay = 1;
+                if (isNaN(num)) num = 1;
+
+                const requestBody = {
+                    userId: state.userId,
+                    numWeek: Math.max(1, Math.min(2, parseInt(numWeek))),
+                    numDay: Math.max(1, Math.min(6, parseInt(numDay))),
+                    num: Math.max(1, Math.min(6, parseInt(num))),
+                    text: text?.toString() || " "
+                };
+                //console.log('Sending to server:', requestBody) // Логируем отправляемые данные
+                const response = await fetch(`http://localhost:3000/api/notes/add`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) throw new Error(await response.text());
+                return await response.json();
+            } catch (error) {
+                console.error('Ошибка синхронизации:', error);
+                throw error;
+            }
+        },
+
+        async deleteNoteFromServer({ state }, { numWeek, numDay, num }) {
+            try {
+                const response = await fetch(`http://${localhost}/api/notes/remove`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: state.userId,
+                        numWeek,
+                        numDay,
+                        num
+                    })
+                });
+                return await response.json();
+            } catch (error) {
+                console.error('Ошибка удаления заметки:', error);
+            }
+        },
+
+        // Обновленный метод для добавления заметки
+        async addNote({ commit, dispatch, state }, note) {
+            // Добавляем только на сервер, затем обновляем список
+            try {
+                const pos = this.getters.getLessonPosition(note);
+                await dispatch('syncNoteToServer', {
+                    numWeek: pos.numberWeek,
+                    numDay: pos.numberDay,
+                    num: pos.number,
+                    text: note.content
+                });
+
+                // Обновляем весь список с сервера
+                await dispatch('fetchAllDataLists');
+            } catch (error) {
+                console.error('Ошибка синхронизации:', error);
+                // Можно добавить уведомление пользователю
+            }
+        },
+
+        async updateNote({ commit, dispatch, state }, updatedNote) {
+            try {
+                // Для серверных заметок
+                if (updatedNote.source === 'server') {
+                    const pos = {
+                        numberWeek: updatedNote.serverData.number_week,
+                        numberDay: updatedNote.serverData.number_day,
+                        number: updatedNote.serverData.number
+                    }
+
+                    await dispatch('syncNoteToServer', {
+                        numWeek: pos.numberWeek,
+                        numDay: pos.numberDay,
+                        num: pos.number,
+                        text: updatedNote.content
+                    })
+                }
+                // Для локальных заметок
+                else {
+                    const pos = this.getters.getLessonPosition(updatedNote)
+                    await dispatch('syncNoteToServer', {
+                        numWeek: pos.numberWeek,
+                        numDay: pos.numberDay,
+                        num: pos.number,
+                        text: updatedNote.content
+                    })
+                }
+
+                // Обновляем данные
+                await dispatch('fetchAllDataLists')
+            } catch (error) {
+                console.error('Update note error:', error)
+                throw error
+            }
+        },
+
+        // Обновленный метод для удаления заметки
+        async deleteNote({ commit, dispatch, state }, noteId) {
+            const note = state.notes.find(n => n.id === noteId) ||
+                state.serverNotes.find(n => `server-${n.number_week}-${n.number_day}-${n.number}` === noteId);
+
+            if (!note) return;
+
+            // Удаляем из локального хранилища
+            commit('DELETE_NOTE', noteId);
+
+            // Для серверных заметок
+            if (noteId.startsWith('server-')) {
+                const [_, numWeek, numDay, num] = noteId.match(/server-(\d+)-(\d+)-(\d+)/) || [];
+                await dispatch('deleteNoteFromServer', {
+                    numWeek: parseInt(numWeek),
+                    numDay: parseInt(numDay),
+                    num: parseInt(num)
+                });
+            } else {
+                // Для локальных заметок
+                const { numberWeek, numberDay, number } = this.getters.getLessonPosition(note);
+                await dispatch('deleteNoteFromServer', {
+                    numWeek: numberWeek,
+                    numDay: numberDay,
+                    num: number
+                });
+            }
+
+            // Обновляем список с сервера
+            await dispatch('fetchAllDataLists');
+        },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -579,7 +752,53 @@ export default createStore({
         // Добавляем геттер для диалога
         noteDialog: state => state.noteDialog,
         // И геттер для получения заметки по ID
-        getNoteById: state => id => state.notes.find(note => note.id === id),
+        getNoteById: (state, getters) => id => {
+            // Обрабатываем случай, когда id - это объект (из noteDialog)
+            const noteId = typeof id === 'object' ? id.noteId : id;
+            //console.log('Поиск заметки по ID:', noteId);
+
+            if (!noteId) {
+                console.warn('Пустой ID заметки');
+                return null;
+            }
+
+            // Ищем в локальных заметках
+            const localNote = state.notes.find(note => note.id === noteId);
+            if (localNote) {
+                //console.log('Найдена локальная заметка:', localNote);
+                return localNote;
+            }
+
+            // Ищем в серверных заметках
+            const serverNoteMatch = String(noteId).match(/server-(\d+)-(\d+)-(\d+)/);
+            if (serverNoteMatch) {
+                const [_, numWeek, numDay, num] = serverNoteMatch;
+                const serverNote = state.serverNotes.find(note =>
+                    note.number_week == numWeek &&
+                    note.number_day == numDay &&
+                    note.number == num
+                );
+
+                if (serverNote) {
+                    //console.log('Найдена серверная заметка:', serverNote);
+                    const lesson = getters.getLessonByServerNote(serverNote);
+                    //console.log('Данные пары для заметки:', lesson);
+
+                    return {
+                        id: `server-${serverNote.number_week}-${serverNote.number_day}-${serverNote.number}`,
+                        lesson: lesson?.lesson || 'Неизвестная пара',
+                        time: convertNumberToTime(serverNote.number, serverNote.number_day === 6),
+                        content: (serverNote.text || '').trim(),
+                        date: convertToDate(serverNote.number_week, serverNote.number_day),
+                        source: 'server',
+                        serverData: serverNote
+                    };
+                }
+            }
+
+            console.warn('Заметка не найдена ни в локальных, ни в серверных');
+            return null;
+        },
         days: state => state.days.map((day, index) => ({
             ...day,
             fullDayName: state.fullDayNames[index], // Исправляем индекс
@@ -608,7 +827,156 @@ export default createStore({
         allGroups: state => state.allGroups,
         allTeachers: state => state.allTeachers,
         allRooms: state => state.allRooms,
-        userNotes: state => state.userNotes
+        userNotes: state => state.userNotes,
+
+
+
+        getLessonPosition: (state) => (note) => {
+            // Преобразуем время пары в номер (1-6)
+            const timeToNumberMap = {
+                '08:00<br>09:30': 1,
+                '09:45<br>11:15': 2,
+                '11:30<br>13:00': 3,
+                '13:50<br>15:20': 4,
+                '15:35<br>17:05': 5,
+                '17:20<br>18:50': 6
+            };
+
+            const date = new Date(note.date);
+            const dayOfWeek = date.getDay(); // 0-6 (воскресенье-суббота)
+            const numDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Приводим к 0-5 (пн-сб)
+
+            return {
+                numberWeek: state.currentWeekNumber,
+                numberDay: numDay + 1, // На сервере дни 1-6
+                number: timeToNumberMap[note.time] || 1
+            };
+        },
+
+        // Объединенные заметки (из БД и localStorage)
+        allNotes: (state, getters) => {
+            const localNotes = state.notes.map(note => ({
+                ...note,
+                source: 'local'
+            }));
+
+            const serverNotes = state.serverNotes
+                .filter(note => {
+                    const lesson = getters.getLessonByServerNote(note);
+                    return lesson && lesson.lesson; // Фильтруем заметки без урока
+                })
+                .map(note => {
+                    const lesson = getters.getLessonByServerNote(note) || {};
+                    const noteDate = convertToDate(note.number_week, note.number_day);
+
+                    return {
+                        id: `server-${note.number_week}-${note.number_day}-${note.number}`,
+                        lesson: lesson.lesson,
+                        time: convertNumberToTime(note.number, note.number_day === 6),
+                        content: note.text,
+                        date: noteDate,
+                        teacher: lesson.teacher || '',
+                        room: lesson.room || '',
+                        source: 'server',
+                        serverData: note
+                    };
+                });
+
+            return [...localNotes, ...serverNotes];
+        },
+
+        getLessonByServerNote: (state) => (serverNote) => {
+            if (!serverNote) {
+                console.warn('getLessonByServerNote: serverNote не определен');
+                return null;
+            }
+
+            try {
+                const weekKey = `week${serverNote.number_week}`;
+                const dayIndex = serverNote.number_day - 1;
+                const daySchedule = state.weeksData[weekKey]?.[dayIndex] || [];
+
+                // console.log('Поиск пары для серверной заметки:', {
+                //     weekKey,
+                //     dayIndex,
+                //     dayScheduleLength: daySchedule.length,
+                //     serverNoteNumber: serverNote.number
+                // });
+
+                const foundLesson = daySchedule.find(lesson => {
+                    const lessonNumber = getNumberFromTime(lesson.time, dayIndex === 5);
+                    // console.log('Сравнение:', {
+                    //     lessonTime: lesson.time,
+                    //     lessonNumber,
+                    //     serverNoteNumber: serverNote.number,
+                    //     match: lessonNumber === serverNote.number
+                    // });
+                    return lessonNumber === serverNote.number;
+                });
+
+                if (foundLesson) {
+                    //console.log('Пара найдена:', foundLesson);
+                    return foundLesson;
+                }
+
+                console.warn('Пара не найдена, возвращаем заглушку');
+                return {
+                    lesson: 'Серверная заметка',
+                    time: convertNumberToTime(serverNote.number, dayIndex === 5),
+                    type: 'unknown'
+                };
+            } catch (error) {
+                console.error('Ошибка поиска урока:', error);
+                return {
+                    lesson: 'Неизвестная пара',
+                    time: '--:--',
+                    type: 'unknown'
+                };
+            }
+        },
+
+        getLessonsForDay: (state) => (week, day) => {
+            const weekKey = `week${week}`;
+            const dayIndex = day - 1; // Преобразуем 1-6 в 0-5
+            return state.weeksData[weekKey]?.[dayIndex] || [];
+        },
+
+        getLessonPosition: (state) => (note) => {
+            // Для серверных заметок
+            if (note.source === 'server' && note.serverData) {
+                return {
+                    numberWeek: note.serverData.number_week,
+                    numberDay: note.serverData.number_day,
+                    number: note.serverData.number
+                };
+            }
+
+            // Для локальных заметок
+            const noteDate = new Date(note.date);
+            const startOfYear = new Date(2024, 8, 1); // 1 сентября
+
+            if (noteDate < startOfYear) {
+                startOfYear.setFullYear(startOfYear.getFullYear() - 1);
+            }
+
+            const diffTime = noteDate - startOfYear;
+            const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
+            const numberWeek = ((diffWeeks + 1) % 2) + 1;
+
+            // Номер дня (1-6, Пн-Сб)
+            let numberDay = noteDate.getDay();
+            numberDay = numberDay === 0 ? 6 : numberDay;
+
+            // Номер пары
+            const isSaturday = numberDay === 6;
+            const number = getNumberFromTime(note.time, isSaturday) || 1;
+
+            return {
+                numberWeek,
+                numberDay,
+                number
+            };
+        }
     }
 })
 

@@ -233,11 +233,11 @@ export default {
           newWeekNumber = newWeekNumber === 0 ? 2 : newWeekNumber;
         }
 
-        console.log('Updating week number:', {
-          baseWeek,
-          offset: this.weekOffset,
-          newWeekNumber
-        });
+        // console.log('Updating week number:', {
+        //   baseWeek,
+        //   offset: this.weekOffset,
+        //   newWeekNumber
+        // });
 
         this.$store.commit('SET_CURRENT_WEEK_NUMBER', newWeekNumber);
         this.$store.commit('SET_CURRENT_WEEK_TYPE', `week${newWeekNumber}`);

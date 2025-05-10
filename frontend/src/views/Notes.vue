@@ -1,31 +1,24 @@
 <template>
-  <div class="notes" :class="{'tg-theme': isTelegram}" :data-theme="isDarkTheme ? 'dark' : 'light'">
-    <Header title="Заметки"/>
-    <div v-if="notes.length > 0" class="notes-list">
-      <div
-          v-for="note in sortedNotes"
-          :key="note.id"
-          class="note-item"
-          :class="{ 'note-item--active': note.id === activeNoteId }"
-          :data-note-id="note.id"
-      >
+  <div class="notes" :class="{ 'tg-theme': isTelegram }" :data-theme="isDarkTheme ? 'dark' : 'light'">
+    <Header title="Заметки" />
+    <div v-if="filteredNotes.length > 0" class="notes-list">
+      <div v-for="note in filteredNotes" :key="note.id" class="note-item"
+        :class="{ 'note-item--active': note.id === activeNoteId }" :data-note-id="note.id">
         <div class="note-header">
           <div class="note-meta">
             <span class="note-date">{{ formatDate(note.date) }}</span>
             <span class="note-time">{{ note.time }}</span>
           </div>
           <div class="note-actions">
-            <button
-                @click="startEditing(note)"
-                class="note-edit-btn"
-            >
+            <button @click="startEditing(note)" class="note-edit-btn">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M8 13.3333H14M11 2.33333L13.6667 5L5.66667 13H3V10.3333L11 2.33333Z" stroke="#3DB95E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8 13.3333H14M11 2.33333L13.6667 5L5.66667 13H3V10.3333L11 2.33333Z" stroke="#3DB95E"
+                  stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
             </button>
             <button @click="deleteNote(note.id)" class="note-delete-btn">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M4 12L12 4M4 4L12 12" stroke="#FF3B30" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M4 12L12 4M4 4L12 12" stroke="#FF3B30" stroke-width="1.5" stroke-linecap="round" />
               </svg>
             </button>
           </div>
@@ -37,12 +30,8 @@
             <span class="note-room">{{ note.room }}</span>
           </div>
           <div v-if="editingNote && editingNote.id === note.id" class="note-edit">
-            <textarea
-                v-model="editingNote.content"
-                class="note-edit-textarea"
-                placeholder="Введите текст заметки..."
-                ref="textarea"
-            ></textarea>
+            <textarea v-model="editingNote.content" class="note-edit-textarea" placeholder="Введите текст заметки..."
+              ref="textarea"></textarea>
             <div class="note-edit-actions">
               <button @click="cancelEditing" class="note-edit-cancel">Отмена</button>
               <button @click="saveNote" class="note-edit-save">Сохранить</button>
@@ -86,7 +75,7 @@ export default {
     }
   },
   computed: {
-    ...mapGetters(['getNotes', 'activeNoteId']),
+    ...mapGetters(['allNotes', 'activeNoteId']),
     notes() {
       // Форматируем время для всех заметок
       return this.getNotes.map(note => ({
@@ -94,16 +83,23 @@ export default {
         time: note.time.replace('<br>', ' - ')
       }))
     },
+    filteredNotes() {
+      return this.allNotes.filter(note => note.source !== 'server' || note.lesson)
+        .map(note => ({
+          ...note,
+          time: note.time.replace('<br>', ' - ')
+        }));
+    },
     sortedNotes() {
-      return [...this.notes].sort((a, b) => {
-        const dateA = new Date(a.date)
-        const dateB = new Date(b.date)
-        return dateB - dateA || a.time.localeCompare(b.time)
-      })
+      return [...this.filteredNotes].sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        return dateB - dateA || a.time.localeCompare(b.time);
+      });
     }
   },
   methods: {
-    ...mapActions(['updateNote', 'deleteNote']),
+    ...mapActions(['updateNote', 'deleteNote', 'syncNoteToServer']),
     initTelegramTheme() {
       const WebApp = window.Telegram.WebApp;
       this.tgThemeParams = WebApp.themeParams || {};
@@ -129,17 +125,6 @@ export default {
         WebApp.close();
       });
     },
-    formatDate(dateString) {
-      const date = new Date(dateString)
-      const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
-      const dayName = days[date.getDay()]
-      const formattedDate = date.toLocaleDateString('ru-RU', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      })
-      return `${dayName}, ${formattedDate}`
-    },
     startEditing(note) {
       this.editingNote = { ...note }
       this.$nextTick(() => {
@@ -153,14 +138,44 @@ export default {
       this.editingNote = null
     },
     async saveNote() {
-      if (this.editingNote) {
-        // Проверяем, содержит ли текст "Нет текста заметки"
-        if (this.editingNote.content && this.editingNote.content.trim() === 'Нет текста заметки') {
-          this.editingNote.content = 'Ну и зачем ты это пишешь ;(|'
+      try {
+        if (this.editingNote) {
+          await this.$store.dispatch('updateNote', this.editingNote);
+          this.editingNote = null;
+          // Заменяем toast на console.log для отладки
+          console.log('Заметка сохранена');
+          // Или добавьте инициализацию toast в проекте
         }
+      } catch (error) {
+        console.error('Ошибка при сохранении заметки:', error);
+        // Аналогично для ошибок
+        console.error(error.message);
+      }
+    },
 
-        await this.updateNote(this.editingNote)
-        this.editingNote = null
+    formatDate(dateString) {
+      const date = new Date(dateString);
+      const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+      const dayName = days[date.getDay()];
+      const formattedDate = date.toLocaleDateString('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+      return `${dayName}, ${formattedDate}`;
+    },
+
+    async deleteNote(noteId) {
+      try {
+          await this.$store.dispatch('deleteNote', noteId)
+            .then(() => this.$store.dispatch('fetchAllDataLists'))
+            .catch(error => {
+              console.error('Delete error:', error)
+              alert('Ошибка при удалении заметки')
+            })
+      } catch (error) {
+        console.error('Delete failed:', error)
+        alert('Не удалось удалить заметку')
       }
     },
     clearHighlightTimer() {
