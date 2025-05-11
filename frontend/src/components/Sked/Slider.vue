@@ -1,5 +1,5 @@
 <template>
-  <section class="slider" :class="{'tg-theme': isTelegram, 'tg-dark': isDarkTheme}">
+  <section class="slider" :class="{ 'tg-theme': isTelegram, 'tg-dark': isDarkTheme }">
     <!-- Стрелки -->
     <svg class="slider__left" :class="{ 'slider__arrow-disabled': weekOffset <= -1 }" width="6" height="10"
       viewBox="0 0 6 10" fill="none" xmlns="http://www.w3.org/2000/svg" @click="prevWeek">
@@ -37,12 +37,15 @@ import { mapActions, mapGetters } from 'vuex'
 export default {
   name: 'Slider',
   data() {
-    const today = new Date()
-    let weekOffset = 0
+    const today = new Date();
+    let weekOffset = 0;
+    let selectedDate = new Date(today);
+    let todayAdjusted = new Date(today);
 
-    // Если сегодня воскресенье, стартуем со следующей недели
+    // Если сегодня воскресенье, считаем текущим днем понедельник
     if (today.getDay() === 0) {
-      weekOffset = 1
+      todayAdjusted.setDate(today.getDate() + 1);
+      selectedDate = new Date(todayAdjusted);
     }
 
     return {
@@ -51,9 +54,8 @@ export default {
       fullDayNames: ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'],
       monthNames: ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'],
       days: [],
-      selectedDate: null,
-      todayAdjusted: new Date(),
-      // Telegram
+      selectedDate,
+      todayAdjusted,
       isTelegram: false,
       isDarkTheme: false,
       tgThemeParams: {}
@@ -82,21 +84,21 @@ export default {
     ...mapActions(['setSelectedDay', 'setCurrentWeekType']),
     initTelegramTheme() {
       const WebApp = window.Telegram.WebApp;
-      
+
       // Получаем параметры темы
       this.tgThemeParams = WebApp.themeParams || {};
       this.isDarkTheme = WebApp.colorScheme === 'dark';
-      
+
       // Применяем тему
       this.applyTelegramTheme();
-      
+
       // Подписываемся на изменение темы
       WebApp.onEvent('themeChanged', this.applyTelegramTheme);
     },
     applyTelegramTheme() {
       const WebApp = window.Telegram.WebApp;
       this.isDarkTheme = WebApp.colorScheme === 'dark';
-      
+
       // Обновляем CSS-переменные
       document.documentElement.style.setProperty('--tg-bg-color', this.tgThemeParams.bg_color || '#ffffff');
       document.documentElement.style.setProperty('--tg-text-color', this.tgThemeParams.text_color || '#000000');
@@ -109,7 +111,7 @@ export default {
     },
     setupTelegramBackButton() {
       const WebApp = window.Telegram.WebApp;
-      
+
       // Показываем кнопку "Назад", если это необходимо
       WebApp.BackButton.show();
       WebApp.BackButton.onClick(() => {
@@ -127,11 +129,8 @@ export default {
       const clickedDate = new Date(this.days[index].originalDate);
       this.selectedDate = clickedDate;
 
-      // Не пересчитываем diffWeeks и не меняем weekOffset
-      // Просто используем текущий weekOffset, чтобы оставить выбранную неделю
-
-      // Обновляем выбранный день
-      this.setSelectedDay({
+      // Полная имитация выбора дня
+      this.$store.dispatch('setSelectedDay', {
         fullDayName: this.fullDayNames[index],
         date: clickedDate.getDate(),
         month: this.monthNames[clickedDate.getMonth()],
@@ -139,8 +138,15 @@ export default {
         dayIndex: index
       });
 
-      // Можно дополнительно обновить отображение, если нужно
-      this.updateWeekNumber();
+      // Обновляем расписание для выбранного дня
+      this.$store.dispatch('fetchFullWeekSchedule');
+
+      // Если используется Swiper - переключаем слайд
+      if (this.swiperInstance) {
+        this.swiperInstance.slideTo(index);
+      }
+
+      // Принудительное обновление дней
       this.updateDays();
     },
 
@@ -151,16 +157,6 @@ export default {
     },
 
     updateDays() {
-      const today = new Date();
-
-      // Если сегодня воскресенье, переключаем на понедельник следующей недели
-      if (today.getDay() === 0) {
-        this.todayAdjusted = new Date(today);
-        this.todayAdjusted.setDate(today.getDate() + 1);
-      } else {
-        this.todayAdjusted = new Date(today);
-      }
-
       const weekStart = new Date(this.todayAdjusted);
       weekStart.setDate(weekStart.getDate() + this.weekOffset * 7);
 
@@ -172,9 +168,15 @@ export default {
         const date = new Date(weekStart);
         date.setDate(weekStart.getDate() + index);
 
-        const isCurrentDay = this.isSameDay(date, this.todayAdjusted);
+        // Проверяем, является ли день "виртуальным сегодняшним" (для воскресенья)
+        const isVirtualToday = this.todayAdjusted.getDay() === 1 &&
+          date.getDate() === this.todayAdjusted.getDate() &&
+          date.getMonth() === this.todayAdjusted.getMonth() &&
+          date.getFullYear() === this.todayAdjusted.getFullYear();
+
+        const isCurrentDay = isVirtualToday || this.isSameDay(date, this.todayAdjusted);
         const isSelectedDay = this.selectedDate
-          ? date.getDay() === this.selectedDate.getDay()
+          ? this.isSameDay(date, this.selectedDate)
           : isCurrentDay;
 
         return {
@@ -191,6 +193,7 @@ export default {
       this.$store.commit('SET_DAYS', newDays);
       this.days = newDays;
 
+      // Если нет выбранного дня, выбираем текущий/ближайший
       if (!this.selectedDate) {
         const activeDay = newDays.find(day => day.isActive);
         if (activeDay) {
@@ -211,6 +214,11 @@ export default {
       if (this.weekOffset > -1) {
         this.weekOffset--;
         this.updateWeekNumber();
+
+        const prevWeekSameDay = new Date(this.selectedDate);
+        prevWeekSameDay.setDate(prevWeekSameDay.getDate() - 7);
+        this.selectedDate = prevWeekSameDay;
+
         this.updateDays();
       }
     },
@@ -219,6 +227,11 @@ export default {
       if (this.weekOffset < 2) {
         this.weekOffset++;
         this.updateWeekNumber();
+
+        const nextWeekSameDay = new Date(this.selectedDate);
+        nextWeekSameDay.setDate(nextWeekSameDay.getDate() + 7);
+        this.selectedDate = nextWeekSameDay;
+
         this.updateDays();
       }
     },
@@ -226,18 +239,10 @@ export default {
     updateWeekNumber() {
       const baseWeek = this.$store.state.baseWeekNumber;
       if (baseWeek) {
-        // Определяем номер недели на основе смещения
-        let newWeekNumber = baseWeek;
-        if (this.weekOffset !== 0) {
-          newWeekNumber = (baseWeek + this.weekOffset) % 2;
-          newWeekNumber = newWeekNumber === 0 ? 2 : newWeekNumber;
-        }
-
-        // console.log('Updating week number:', {
-        //   baseWeek,
-        //   offset: this.weekOffset,
-        //   newWeekNumber
-        // });
+        // Номер недели = (базовая неделя + смещение) mod 2
+        // Если 0, то это 2-я неделя
+        let newWeekNumber = (baseWeek + this.weekOffset) % 2;
+        newWeekNumber = newWeekNumber === 0 ? 2 : newWeekNumber;
 
         this.$store.commit('SET_CURRENT_WEEK_NUMBER', newWeekNumber);
         this.$store.commit('SET_CURRENT_WEEK_TYPE', `week${newWeekNumber}`);
@@ -272,11 +277,36 @@ export default {
     },
   },
   mounted() {
-    const today = new Date()
+    // При монтировании проверяем день недели
+    const today = new Date();
     if (today.getDay() === 0) {
-      this.weekOffset = 1
+      this.todayAdjusted.setDate(today.getDate() + 1);
+      this.selectedDate = new Date(this.todayAdjusted);
     }
-    this.updateDays()
+    this.updateDays();
+
+    this.$nextTick(() => {
+      const today = new Date();
+      let dayIndex = today.getDay() - 1; // Получаем индекс дня (0-5)
+
+      // Если воскресенье - выбираем понедельник (индекс 0)
+      if (today.getDay() === 0) {
+        dayIndex = 0;
+        this.todayAdjusted.setDate(today.getDate() + 1);
+      }
+
+      // Ждём пока дни загрузятся
+      setTimeout(() => {
+        if (this.days[dayIndex]) {
+          this.handleDayClick(dayIndex);
+
+          // Дополнительно триггерим событие для Swiper
+          if (this.swiperInstance) {
+            this.swiperInstance.slideTo(dayIndex);
+          }
+        }
+      }, 100);
+    });
   }
 }
 </script>

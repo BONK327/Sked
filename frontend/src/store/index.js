@@ -120,13 +120,17 @@ export default createStore({
         },
         // Добавляем новые мутации для управления диалогом
         OPEN_NOTE_DIALOG(state, payload) {
-            // Принимаем как строку или объект
-            const noteId = typeof payload === 'object' ? payload.noteId : payload;
             state.noteDialog.isOpen = true;
-            state.noteDialog.noteId = {
-                noteId: String(noteId), // Гарантируем строковый ID в объекте
-                forceUpdate: Date.now() // Добавляем метку времени для принудительного обновления
-            };
+
+            // Гарантируем, что noteId всегда будет строкой или null
+            if (typeof payload === 'object') {
+                state.noteDialog.noteId = {
+                    noteId: String(payload.noteId || ''),
+                    forceUpdate: Date.now()
+                };
+            } else {
+                state.noteDialog.noteId = payload ? String(payload) : null;
+            }
         },
         CLOSE_NOTE_DIALOG(state) {
             state.noteDialog.isOpen = false
@@ -919,14 +923,14 @@ export default createStore({
                     return foundLesson;
                 }
 
-                console.warn('Пара не найдена, возвращаем заглушку');
+                //console.warn('Пара не найдена, возвращаем заглушку');
                 return {
                     lesson: 'Серверная заметка',
                     time: convertNumberToTime(serverNote.number, dayIndex === 5),
                     type: 'unknown'
                 };
             } catch (error) {
-                console.error('Ошибка поиска урока:', error);
+                //console.error('Ошибка поиска урока:', error);
                 return {
                     lesson: 'Неизвестная пара',
                     time: '--:--',

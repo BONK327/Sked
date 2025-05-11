@@ -89,29 +89,48 @@ export default {
       });
     },
     currentNote() {
-      // Получаем ID заметки
-      const noteId = this.noteDialog.noteId?.noteId || this.noteDialog.noteId;
-      //console.log('Полученный noteId:', noteId);
+      try {
+        // Получаем ID заметки безопасным способом
+        const noteId = this.noteDialog.noteId?.noteId || this.noteDialog.noteId;
 
-      // Получаем заметку из хранилища
-      const note = this.$store.getters.getNoteById(noteId);
-      //console.log('Найденная заметка:', note);
+        // Если ID нет, возвращаем пустой объект
+        if (!noteId) {
+          return {
+            id: null,
+            lesson: '',
+            time: '',
+            content: '',
+            date: '',
+            source: 'local'
+          };
+        }
 
-      // Возвращаем заметку или пустой объект
-      return note || {
-        id: null,
-        lesson: '',
-        time: '',
-        content: '',
-        date: '',
-        teacher: '',
-        room: '',
-        source: 'local'
-      };
+        // Получаем заметку из хранилища
+        const note = this.$store.getters.getNoteById(noteId);
+
+        // Если заметка не найдена, возвращаем пустой объект
+        return note || {
+          id: null,
+          lesson: '',
+          time: '',
+          content: '',
+          date: '',
+          source: 'local'
+        };
+      } catch (error) {
+        console.error('Error getting current note:', error);
+        return {
+          id: null,
+          lesson: '',
+          time: '',
+          content: '',
+          date: '',
+          source: 'local'
+        };
+      }
     },
     formattedTime() {
-      if (!this.currentNote.time) return ''
-      return this.currentNote.time.replace('<br>', ' - ')
+      return this.currentNote.time ? this.currentNote.time.replace('<br>', ' - ') : '';
     }
   },
   methods: {
@@ -132,9 +151,23 @@ export default {
       this.$refs.textarea?.focus()
     },
     navigateToNote() {
-      this.setActiveTab('notes')
-      this.setActiveNote(this.currentNote.id)
-      this.closeDialog()
+      // Добавляем проверку на существование заметки
+      if (!this.currentNote?.id) {
+        console.warn('Note ID is not available');
+        return;
+      }
+
+      this.setActiveTab('notes');
+      this.setActiveNote(this.currentNote.id);
+      this.closeDialog();
+
+      // Прокручиваем к заметке после перехода
+      this.$nextTick(() => {
+        const noteElement = document.querySelector(`[data-note-id="${this.currentNote.id}"]`);
+        if (noteElement) {
+          noteElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
     },
     async saveNote() {
       try {

@@ -1,15 +1,8 @@
 <template>
   <section class="search" :class="{ 'tg-theme': isTelegram, 'tg-dark': isDarkTheme }">
-    <input class="search__input" 
-           type="text" 
-           v-model="searchInput" 
-           @input="handleInput"
-           @blur="hideSuggestions"
-           placeholder="Группа, преподаватель, аудитория"
-           @keyup.enter="handleSearch"
-           @keydown.down="moveSelection(1)"
-           @keydown.up="moveSelection(-1)"
-           ref="searchInput">
+    <input class="search__input" type="text" v-model="searchInput" @input="handleInput" @blur="hideSuggestions"
+      placeholder="Группа, преподаватель, аудитория" @keyup.enter="handleSearch" @keydown.down="moveSelection(1)"
+      @keydown.up="moveSelection(-1)" ref="searchInput">
     <transition name="fade">
       <div v-if="errorMessage" class="search-error">
         {{ errorMessage }}
@@ -17,7 +10,8 @@
     </transition>
     <div v-if="showSuggestions && suggestions.length > 0" class="suggestions">
       <div v-for="(item, index) in suggestions" :key="item" class="suggestion-item"
-        :class="{ 'suggestion-active': index === activeSuggestionIndex }" @keyup.enter="handleEnter" @mousedown.prevent="selectSuggestion(item)">
+        :class="{ 'suggestion-active': index === activeSuggestionIndex }" @keyup.enter="handleEnter"
+        @mousedown.prevent="selectSuggestion(item)">
         {{ item }}
       </div>
     </div>
@@ -142,12 +136,12 @@ export default {
     },
 
     handleEnter() {
-  if (this.activeSuggestionIndex >= 0 && this.suggestions.length) {
-    this.selectSuggestion(this.suggestions[this.activeSuggestionIndex]);
-  } else {
-    this.handleSearch();
-  }
-},
+      if (this.activeSuggestionIndex >= 0 && this.suggestions.length) {
+        this.selectSuggestion(this.suggestions[this.activeSuggestionIndex]);
+      } else {
+        this.handleSearch();
+      }
+    },
 
     // Форматируем группу (делаем буквы перед цифрами заглавными)
     formatGroupName(group) {
@@ -188,44 +182,46 @@ export default {
       // Нормализуем ввод
       const normalizedInput = input.trim().toLowerCase()
         .replace(/\./g, '') // Удаляем точки
-        .replace(/\s+/g, ' ') // Заменяем множественные пробелы
-        .replace(/-/g, ' '); // Заменяем дефисы на пробелы
+        .replace(/\s+/g, ' ') // Множественные пробелы в один
+        .replace(/-/g, ' '); // Дефисы в пробелы
 
       const inputParts = normalizedInput.split(' ');
       const allTeachers = this.$store.getters.allTeachers || [];
 
-      // Ищем всех преподавателей с подходящей фамилией
-      let candidates = allTeachers.filter(teacher => {
+      // 1. Сначала ищем полное точное совпадение
+      const exactMatch = allTeachers.find(teacher => {
+        const teacherNormalized = teacher.toLowerCase().replace(/ /g, ' ');
+        return teacherNormalized === normalizedInput;
+      });
+      if (exactMatch) return exactMatch.replace(/ /g, '_');
+
+      // 2. Ищем по фамилии и инициалам
+      const candidates = allTeachers.filter(teacher => {
         const teacherParts = teacher.toLowerCase().split(' ');
-        return teacherParts[0] === inputParts[0];
+
+        // Проверяем фамилию
+        if (teacherParts[0] !== inputParts[0]) return false;
+
+        // Проверяем инициалы, если они введены
+        if (inputParts.length > 1 && teacherParts[1]) {
+          return teacherParts[1].charAt(0) === inputParts[1].charAt(0);
+        }
+
+        return true;
       });
 
-      // Если ввели только фамилию
-      if (inputParts.length === 1) {
-        return candidates.length === 1
-          ? candidates[0].replace(/ /g, '_')
-          : null;
+      // Если нашли только одного - возвращаем его
+      if (candidates.length === 1) {
+        return candidates[0].replace(/ /g, '_');
       }
 
-      // Фильтруем по имени (первая буква)
-      if (inputParts.length > 1) {
-        candidates = candidates.filter(teacher => {
-          const teacherParts = teacher.toLowerCase().split(' ');
-          return teacherParts[1]?.charAt(0) === inputParts[1].charAt(0);
-        });
+      // Если несколько кандидатов - возвращаем null (покажем уточняющее сообщение)
+      if (candidates.length > 1) {
+        return null;
       }
 
-      // Фильтруем по отчеству (первая буква)
-      if (inputParts.length > 2) {
-        candidates = candidates.filter(teacher => {
-          const teacherParts = teacher.toLowerCase().split(' ');
-          return teacherParts[2]?.charAt(0) === inputParts[2].charAt(0);
-        });
-      }
-
-      return candidates.length === 1
-        ? candidates[0].replace(/ /g, '_')
-        : null;
+      // Если вообще нет совпадений - возвращаем пустую строку (для отличия от множества вариантов)
+      return '';
     },
 
     // Форматирование для отображения: "иванов иван" → "Иванов И."
@@ -297,16 +293,6 @@ export default {
     },
 
     async handleSearch() {
-
-
-
-      // console.log('Поиск:', {
-      //   input: this.searchInput,
-      //   type: this.validateInput(this.searchInput),
-      //   allTeachers: this.$store.getters.allTeachers,
-      //   apiFormat: this.formatTeacherForApi(this.searchInput)
-      // });
-
       if (this.activeSuggestionIndex >= 0 && this.suggestions.length) {
         this.searchInput = this.suggestions[this.activeSuggestionIndex];
       }
@@ -317,7 +303,7 @@ export default {
       const type = this.validateInput(query);
       if (!type) {
         this.errorMessage = 'Введите: группу (ПИ2303), преподавателя (Иванов) или аудиторию (405эк)';
-        setTimeout(() => this.errorMessage = '', 3000);
+        setTimeout(() => this.errorMessage = '', 1000);
         return;
       }
 
@@ -326,29 +312,37 @@ export default {
           const apiQuery = this.formatTeacherForApi(query);
           const allTeachers = this.$store.getters.allTeachers || [];
 
+          // Если не удалось преобразовать ввод (нет совпадений)
           if (apiQuery === null) {
-            const suggestions = this.getTeacherSuggestions(query);
-            this.errorMessage = suggestions.length
-              ? `Уточните преподавателя: ${suggestions.join(', ')}`
-              : 'Найдено несколько преподавателей с такой фамилией. Уточните имя.';
-            setTimeout(() => this.errorMessage = '', 5000);
+            // Проверяем, есть ли вообще преподаватели с такой фамилией
+            const sameLastNameTeachers = allTeachers.filter(t => {
+              const parts = t.split(' ');
+              return parts[0].toLowerCase() === query.toLowerCase().split(' ')[0];
+            });
+
+            if (sameLastNameTeachers.length > 0) {
+              // Если есть несколько преподавателей с такой фамилией
+              const suggestions = sameLastNameTeachers
+                .map(t => this.formatTeacherForDisplay(t))
+                .slice(0, 3); // Показываем первые 3 варианта
+
+              this.errorMessage = `Найдено несколько преподавателей. Уточните: ${suggestions.join(', ')}`;
+            } else {
+              // Если вообще нет преподавателей с такой фамилией
+              this.errorMessage = `Преподаватель не найден. Проверьте правильность ввода`;
+            }
+            setTimeout(() => this.errorMessage = '', 1000);
             return;
           }
 
-          if (!apiQuery) {
-            this.errorMessage = 'Преподаватель не найден';
-            setTimeout(() => this.errorMessage = '', 3000);
-            return;
-          }
-
-          // Проверяем существование в списке
+          // Проверяем точное соответствие
           const exists = allTeachers.some(t =>
             t.replace(/ /g, '_').toLowerCase() === apiQuery.toLowerCase()
           );
 
           if (!exists) {
-            this.errorMessage = `Преподаватель ${this.formatTeacherForDisplay(apiQuery.replace(/_/g, ' '))} не найден`;
-            setTimeout(() => this.errorMessage = '', 3000);
+            this.errorMessage = `Преподаватель не найден`;
+            setTimeout(() => this.errorMessage = '', 1000);
             return;
           }
 
@@ -357,9 +351,7 @@ export default {
             query: apiQuery,
             displayQuery: this.formatTeacherForDisplay(apiQuery.replace(/_/g, ' '))
           });
-          return;
         } else {
-          // Логика для групп и аудиторий
           const list = type === 'group'
             ? this.$store.getters.allGroups || []
             : this.$store.getters.allRooms || [];
@@ -370,7 +362,7 @@ export default {
 
           if (!exists) {
             this.errorMessage = `${this.getTypeName(type)} "${query}" не найден(а)`;
-            setTimeout(() => this.errorMessage = '', 3000);
+            setTimeout(() => this.errorMessage = '', 1000);
             return;
           }
 
@@ -380,12 +372,16 @@ export default {
             displayQuery: query
           });
         }
+
+        // Очищаем поле поиска после успешного поиска
+        this.searchInput = '';
+        this.showSuggestions = false;
+        this.activeSuggestionIndex = -1;
+
       } catch (error) {
         console.error('Ошибка поиска:', error);
         this.errorMessage = 'Ошибка при загрузке расписания';
         setTimeout(() => this.errorMessage = '', 3000);
-      } finally {
-        this.showSuggestions = false;
       }
     },
 
