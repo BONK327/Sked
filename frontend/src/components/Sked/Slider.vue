@@ -208,6 +208,9 @@ export default {
           });
         }
       }
+
+      // Возвращаем days для использования в других методах
+      return newDays;
     },
 
     prevWeek() {
@@ -220,6 +223,16 @@ export default {
         this.selectedDate = prevWeekSameDay;
 
         this.updateDays();
+
+        // Добавлено: обработка клика после обновления
+        this.$nextTick(() => {
+          const selectedIndex = this.days.findIndex(day =>
+            day.isActive
+          );
+          if (selectedIndex !== -1) {
+            this.handleDayClick(selectedIndex);
+          }
+        });
       }
     },
 
@@ -233,7 +246,33 @@ export default {
         this.selectedDate = nextWeekSameDay;
 
         this.updateDays();
+
+        // Добавлено: обработка клика после обновления
+        this.$nextTick(() => {
+          const selectedIndex = this.days.findIndex(day =>
+            day.isActive
+          );
+          if (selectedIndex !== -1) {
+            this.handleDayClick(selectedIndex);
+          }
+        });
       }
+    },
+    
+    triggerCurrentDayClick(days) {
+      this.$nextTick(() => {
+        // Находим индекс текущего дня
+        const currentDayIndex = days.findIndex(day => day.isCurrentDay);
+
+        // Если нашли текущий день - имитируем клик
+        if (currentDayIndex !== -1) {
+          this.handleDayClick(currentDayIndex);
+        } else {
+          // Если текущего дня нет в этой неделе (например, при переключении на неделю без текущего дня)
+          // Выбираем первый день (понедельник)
+          this.handleDayClick(0);
+        }
+      });
     },
 
     updateWeekNumber() {
@@ -283,7 +322,8 @@ export default {
       this.todayAdjusted.setDate(today.getDate() + 1);
       this.selectedDate = new Date(this.todayAdjusted);
     }
-    this.updateDays();
+
+    const days = this.updateDays();
 
     this.$nextTick(() => {
       const today = new Date();
@@ -297,7 +337,7 @@ export default {
 
       // Ждём пока дни загрузятся
       setTimeout(() => {
-        if (this.days[dayIndex]) {
+        if (days[dayIndex]) {
           this.handleDayClick(dayIndex);
 
           // Дополнительно триггерим событие для Swiper

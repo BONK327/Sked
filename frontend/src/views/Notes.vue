@@ -26,8 +26,22 @@
         <div class="note-content-wrapper">
           <h3 class="note-lesson">{{ note.lesson }}</h3>
           <div class="note-details">
-            <span class="note-teacher">{{ note.teacher }}</span>
-            <span class="note-room">{{ note.room }}</span>
+            <template v-if="searchType === 'teacher'">
+              <span class="note-teacher">{{ note.room }}</span>
+              <span class="note-room">{{ formatGroups(note) }}</span>
+            </template>
+            <template v-else-if="searchType === 'group'">
+              <span class="note-teacher">{{ formatTeachers(note) }}</span>
+              <span class="note-room">{{ formatRoom(note) }}</span>
+            </template>
+            <template v-else-if="searchType === 'room'">
+              <span class="note-teacher">{{ formatTeachers(note) }}</span>
+              <span class="note-room">{{ formatGroups(note) }}</span>
+            </template>
+            <template v-else>
+              <span class="note-teacher">{{ note.teacher }}</span>
+              <span class="note-room">{{ note.room }}</span>
+            </template>
           </div>
           <div v-if="editingNote && editingNote.id === note.id" class="note-edit">
             <textarea v-model="editingNote.content" class="note-edit-textarea" placeholder="Введите текст заметки..."
@@ -75,7 +89,7 @@ export default {
     }
   },
   computed: {
-    ...mapGetters(['allNotes', 'activeNoteId']),
+    ...mapGetters(['allNotes', 'activeNoteId', 'searchType']),
     notes() {
       // Форматируем время для всех заметок
       return this.getNotes.map(note => ({
@@ -167,12 +181,12 @@ export default {
 
     async deleteNote(noteId) {
       try {
-          await this.$store.dispatch('deleteNote', noteId)
-            .then(() => this.$store.dispatch('fetchAllDataLists'))
-            .catch(error => {
-              console.error('Delete error:', error)
-              alert('Ошибка при удалении заметки')
-            })
+        await this.$store.dispatch('deleteNote', noteId)
+          .then(() => this.$store.dispatch('fetchAllDataLists'))
+          .catch(error => {
+            console.error('Delete error:', error)
+            alert('Ошибка при удалении заметки')
+          })
       } catch (error) {
         console.error('Delete failed:', error)
         alert('Не удалось удалить заметку')
@@ -183,7 +197,183 @@ export default {
         clearTimeout(this.highlightTimeout)
         this.highlightTimeout = null
       }
+    },
+
+
+
+    formatTeachers(note) {
+      // Для серверных заметок
+      if (note.source === 'server' && note.serverData) {
+        const lesson = this.$store.getters.getLessonByServerNote(note.serverData);
+        if (lesson) {
+          if (this.searchType === 'room') {
+            return this.formatTeachersList(lesson.details || []);
+          }
+          return this.formatTeachersList(lesson.teachers || []);
+        }
+        return '';
+      }
+
+      // Для локальных заметок
+      if (note.teachers) {
+        if (Array.isArray(note.teachers)) {
+          return this.formatTeachersList(note.teachers);
+        }
+        return note.teachers;
+      }
+
+      // Попробуем извлечь из details, если есть
+      if (note.details && Array.isArray(note.details)) {
+        return this.formatTeachersList(note.details);
+      }
+
+      return '';
+    },
+
+    formatGroups(note) {
+      // Для серверных заметок
+      if (note.source === 'server' && note.serverData) {
+        const lesson = this.$store.getters.getLessonByServerNote(note.serverData);
+        if (lesson) {
+          if (this.searchType === 'teacher') {
+            return this.formatGroupsList(lesson.details || []);
+          } else if (this.searchType === 'room') {
+            const groups = lesson.details?.flatMap(d => d.groups || []) || [];
+            return this.formatGroupsList(groups);
+          }
+        }
+        return '';
+      }
+
+      // Для локальных заметок
+      if (note.groups) {
+        if (Array.isArray(note.groups)) {
+          return this.formatGroupsList(note.groups);
+        }
+        return note.groups;
+      }
+
+      // Попробуем извлечь из details, если есть
+      if (note.details && Array.isArray(note.details)) {
+        return this.formatGroupsList(note.details);
+      }
+
+      return '';
+    },
+
+    formatRoom(note) {
+      // Для серверных заметок
+      if (note.source === 'server' && note.serverData) {
+        const lesson = this.$store.getters.getLessonByServerNote(note.serverData);
+        if (lesson) {
+          if (this.searchType === 'group') {
+            return this.formatRoomsList(lesson.teachers || []);
+          }
+          return lesson.room || '';
+        }
+        return '';
+      }
+
+      // Для локальных заметок
+      return note.room || '';
+    },
+
+    formatTeachersList(items) {
+      if (!items || !items.length) return '';
+
+      // Сначала собираем всех уникальных преподавателей
+      const uniqueTeachers = new Map();
+
+      items.forEach(item => {
+        const teacherName = item.name || item.teacher || '';
+        if (!teacherName) return;
+
+        const subgroup = item.subgroup || (item.groups?.[0]?.subgroup) || '';
+
+        if (!uniqueTeachers.has(teacherName)) {
+          uniqueTeachers.set(teacherName, new Set());
+        }
+        if (subgroup) {
+          uniqueTeachers.get(teacherName).add(subgroup);
+        }
+      });
+
+      // Формируем строку для каждого преподавателя
+      const result = [];
+      uniqueTeachers.forEach((subgroups, teacherName) => {
+        const nameParts = teacherName.split(' ');
+        const shortName = nameParts[0] + ' ' +
+          (nameParts[1] ? nameParts[1][0] + '.' : '') +
+          (nameParts[2] ? nameParts[2][0] + '.' : '');
+
+        if (subgroups.size > 0) {
+          result.push(`${shortName} (${[...subgroups].join(',')})`);
+        } else {
+          result.push(shortName);
+        }
+      });
+
+      return result.join(', ');
+    },
+
+    formatGroupsList(groups) {
+      if (!groups) return '';
+
+      // Для аудиторий показываем только базовые группы
+      if (this.searchType === 'room') {
+        const uniqueGroups = new Set();
+        groups.forEach(g => {
+          if (g.group) {
+            const baseGroup = g.group.split('(')[0];
+            uniqueGroups.add(baseGroup);
+          }
+        });
+        return [...uniqueGroups].join(', ');
+      }
+
+      // Для преподавателей и других случаев показываем группы с подгруппами
+      return groups.map(g => {
+        if (!g.group) return '';
+        let str = g.group;
+        if (g.subgroup) str += ` (${g.subgroup})`;
+        return str;
+      }).filter(Boolean).join(', ');
+    },
+
+
+    formatRoomsList(items) {
+      if (!items || !items.length) return '';
+
+      const roomMap = new Map();
+      const allSubgroups = new Set();
+
+      // Собираем все подгруппы
+      items.forEach(item => {
+        if (item.subgroup) {
+          allSubgroups.add(item.subgroup);
+        }
+      });
+
+      // Группируем по аудиториям
+      items.forEach(item => {
+        if (item.room) {
+          if (!roomMap.has(item.room)) {
+            roomMap.set(item.room, new Set());
+          }
+          if (item.subgroup) {
+            roomMap.get(item.room).add(item.subgroup);
+          }
+        }
+      });
+
+      // Формируем результат
+      return [...roomMap.entries()].map(([room, subgroups]) => {
+        // Не показываем подгруппы если в аудитории все подгруппы
+        return subgroups.size === allSubgroups.size ? room : `${room} (${[...subgroups].join(',')})`;
+      }).join(', ');
     }
+
+
   },
   beforeUnmount() {
     this.clearHighlightTimer()
@@ -197,12 +387,13 @@ export default {
 .notes
   display: flex
   flex-direction: column
-  height: calc(100vh - #{$header-height} - #{$footer-height} - 2rem)
+  height: calc(100vh - #{$footer-height})
   width: 100%
   background: var(--tg-secondary-bg-color)
   overflow: hidden
   padding: 1.5rem
   color: var(--tg-text-color)
+  
 
   &.tg-theme
     background: var(--tg-secondary-bg-color)
@@ -233,6 +424,9 @@ export default {
   box-shadow: none
   margin-bottom: 0
   border-left: 3px solid transparent
+  -webkit-box-shadow: 0px 6px 23px -15px rgba(6, 6, 6, 1);
+  -moz-box-shadow: 0px 6px 23px -15px rgba(6, 6, 6, 1);
+  box-shadow: 0px 6px 23px -15px rgba(6, 6, 6, 1);
 
   .tg-theme &
     background-color: var(--tg-bg-color)

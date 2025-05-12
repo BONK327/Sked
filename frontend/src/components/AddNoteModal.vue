@@ -92,24 +92,49 @@ export default {
     },
     async handleAddNote(lesson) {
       try {
-        //console.log('Добавление заметки для:', lesson);
-
-        const newNote = {
+        // Получаем данные для заметки в зависимости от типа поиска
+        let noteData = {
           id: Date.now(),
           lesson: lesson.lesson,
           time: lesson.time,
           content: '',
-          date: this.selectedDate,
-          teacher: lesson.teacher || '',
-          room: lesson.room || ''
+          date: this.selectedDate
         };
 
-        await this.$store.dispatch('addNote', newNote);
+        // Добавляем дополнительные поля в зависимости от типа поиска
+        switch (this.searchType) {
+          case 'teacher':
+            noteData.room = lesson.room || '';
+            noteData.details = lesson.details || [];
+            break;
+          case 'group':
+            noteData.teachers = lesson.teachers || [];
+            noteData.room = this.formatRooms(lesson.teachers || []);
+            break;
+          case 'room':
+            noteData.teachers = lesson.details || [];
+            noteData.details = lesson.details || [];
+            break;
+        }
+
+        await this.$store.dispatch('addNote', noteData);
         this.closeModal();
       } catch (error) {
         console.error('Ошибка добавления заметки:', error);
-        // Показать пользователю сообщение об ошибке
       }
+    },
+
+    formatRooms(teachers) {
+      if (!teachers || !teachers.length) return '';
+
+      const rooms = new Set();
+      teachers.forEach(teacher => {
+        if (teacher.room) {
+          rooms.add(teacher.room);
+        }
+      });
+
+      return [...rooms].join(', ');
     }
   }
 }
