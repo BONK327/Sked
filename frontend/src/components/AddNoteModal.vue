@@ -160,17 +160,17 @@ export default {
 
 .modal
   background: $color-white
-  border-radius: 12px
+  border-radius: 1.2rem
   padding: 1.5rem
   width: 100%
-  max-width: 500px
+  max-width: 50rem
   max-height: 80vh
   overflow-y: auto
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1)
+  box-shadow: 0 .4rem 2rem rgba(0, 0, 0, 0.1)
 
   .tg-theme &
     background: var(--tg-bg-color)
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3)
+    box-shadow: 0 .4rem 2rem rgba(0, 0, 0, 0.3)
 
 .modal-header
   display: flex
@@ -178,7 +178,7 @@ export default {
   align-items: center
   margin-bottom: 1.5rem
   padding-bottom: 0.5rem
-  border-bottom: 1px solid rgba(var(--tg-text-color), 0.1)
+  border-bottom: .1rem solid rgba(var(--tg-text-color), 0.1)
 
   h3
     font-size: 1.3rem
@@ -199,7 +199,7 @@ export default {
 
 .lesson-item
   padding: 1rem
-  border-radius: 8px
+  border-radius: .8rem
   margin-bottom: 0.5rem
   cursor: pointer
   transition: all 0.2s ease
@@ -266,15 +266,15 @@ export default {
 
 // Стили для скроллбара в модальном окне
 .modal::-webkit-scrollbar
-  width: 6px
+  width: .6rem
 
 .modal::-webkit-scrollbar-track
   background: rgba(0, 0, 0, 0.05)
-  border-radius: 3px
+  border-radius: .3rem
 
 .modal::-webkit-scrollbar-thumb
   background: $color-light-green
-  border-radius: 3px
+  border-radius: .3rem
 
 .tg-theme .modal::-webkit-scrollbar-thumb
   background: $color-light-green

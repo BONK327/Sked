@@ -1,10 +1,13 @@
 <template>
   <Slider/>
   <GroupInfo/>
-  <Search/>
+  <Search 
+    ref="search1"
+    placeholder="Группа, преподаватель, аудитория"
+    @search="handleSearch($event)"
+  />
   <ScheduleTable/>
   <Buttons/>
-
 </template>
 
 <script>
@@ -14,12 +17,24 @@ import GroupInfo from "@/components/Sked/GroupInfo.vue";
 import Search from "@/components/Sked/Search.vue";
 import ScheduleTable from "@/components/Sked/ScheduleTable.vue";
 import Buttons from "@/components/UI/Buttons.vue";
+import { mapActions } from 'vuex';
 
 export default {
   name: 'sked',
   components: {Header, Buttons, ScheduleTable, Search, GroupInfo, Slider},
+  methods: {
+    ...mapActions(['searchSchedule']),
+    
+    handleSearch(event) {
+      this.searchSchedule({
+        type: event.type,
+        query: event.query,
+        week: 'week1' // Используем week1 по умолчанию, как в Double.vue
+      });
+    }
+  },
   mounted() {
-    this.$store.dispatch('updateDays')
+    this.$store.dispatch('updateDays');
   }
 }
 </script>

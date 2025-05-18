@@ -35,17 +35,24 @@
     </div>
 
 
-    <div class="footer__double">
+    <div class="footer__double" :class="{ 'active-tab': activeTab === 'double' }" @click="switchTab('double')">
       <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path
-          d="M8 20V23C8 23.5523 8.44772 24 9 24H23C23.5523 24 24 23.5523 24 23V9C24 8.44772 23.5523 8 23 8H18H2M24 12H18M14 1V4M6 1V4M5 12H7M9 12H15M5 16H7M9 16H15M3 4H17C17.5523 4 18 4.44772 18 5V19C18 19.5523 17.5523 20 17 20H3C2.44772 20 2 19.5523 2 19V5C2 4.44772 2.44772 4 3 4Z"
-          stroke="#33984E" stroke-width="1.5" />
-        <path
-          d="M7 19V22C7 22.5523 7.44772 23 8 23H22C22.5523 23 23 22.5523 23 22V8C23 7.44772 22.5523 7 22 7H17H1M23 11H17M13 0V3M5 0V3M4 11H6M8 11H14M4 15H6M8 15H14M2 3H16C16.5523 3 17 3.44772 17 4V18C17 18.5523 16.5523 19 16 19H2C1.44772 19 1 18.5523 1 18V4C1 3.44772 1.44772 3 2 3Z"
-          stroke="white" stroke-width="1.5" />
+        <!-- Зеленый календарь (нижний слой в активном состоянии) -->
+        <path 
+          d="M8 20V23C8 23.5523 8.44772 24 9 24H23C23.5523 24 24 23.5523 24 23V9C24 8.44772 23.5523 8 23 8H18H2M24 12H18M14 1V4M6 1V4M5 12H7M9 12H15M5 16H7M9 16H15M3 4H17C17.5523 4 18 4.44772 18 5V19C18 19.5523 17.5523 20 17 20H3C2.44772 20 2 19.5523 2 19V5C2 4.44772 2.44772 4 3 4Z" 
+          stroke="#33984E"
+          stroke-width="1.4"
+        />
+
+        <!-- Белый календарь (верхний слой в активном состоянии) -->
+        <path 
+          d="M7 19V22C7 22.5523 7.44772 23 8 23H22C22.5523 23 23 22.5523 23 22V8C23 7.44772 22.5523 7 22 7H17H1M23 11H17M13 0V3M5 0V3M4 11H6M8 11H14M4 15H6M8 15H14M2 3H16C16.5523 3 17 3.44772 17 4V18C17 18.5523 16.5523 19 16 19H2C1.44772 19 1 18.5523 1 18V4C1 3.44772 1.44772 3 2 3Z" 
+          stroke="white"
+          stroke-width="1.4"
+        />      
       </svg>
     </div>
-
+    
   </footer>
 </template>
 
@@ -84,10 +91,9 @@ export default {
   left: 50%
   transform: translateX(-50%)
   z-index: 100
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.1)
-  border-radius: .8rem .8rem 0 0
-  transition: all 0.3s ease
-
+  box-shadow: 0 -.2rem 1rem rgba(0,0,0,0.1)
+  transition: transform 0.3s ease
+  
   @media (max-width: $mobile-breakpoint)
     border-radius: 0
 
@@ -128,4 +134,27 @@ export default {
     @media (hover: hover) and (pointer: fine)
       &:hover
         transform: none
+
+.footer
+  @media (orientation: landscape) and (max-width: 1025px)
+    position: fixed
+    top: 0
+    right: 0
+    width: $footer-height // ширина футера = высоте в портретном режиме
+    height: 100vh        // на всю высоту экрана
+    flex-direction: column
+    box-shadow: -.2rem 0 1rem rgba(0,0,0,0.1)
+    justify-content: flex-start
+    align-items: center
+    transform: none
+    left: auto
+    bottom: auto
+    max-width: none
+    .active-tab
+      background-color: rgba(255, 255, 255, 0.2)
+      width: 100%
+      box-shadow: 0 .2rem .8rem rgba(0,0,0,0.1)
+      border-radius: .8rem
+      svg
+        transform: scale(1.1)
 </style>

@@ -25,6 +25,7 @@ import Footer from "@/components/Footer.vue"
 import AddNoteModal from "@/components/AddNoteModal.vue"
 import NoteDialog from "@/components/NoteDialog.vue"
 import Preloader from "@/components/Preloader.vue" // Импортируем Preloader
+import Double from './components/double/Double.vue'
 
 export default {
   name: 'App',
@@ -34,7 +35,8 @@ export default {
     Notes,
     AddNoteModal,
     NoteDialog,
-    Preloader
+    Preloader, 
+    Double
   },
   data() {
     return {
@@ -46,11 +48,34 @@ export default {
   },
   computed: {
     ...mapGetters(['activeTab']),
-    currentComponent() {
-      return this.activeTab === 'schedule' ? 'sked' : 'Notes'
+     currentComponent() {
+      const components = {
+        'schedule': 'sked',
+        'notes': 'Notes',
+        'double': 'Double'
+      }
+      return components[this.activeTab] || 'sked'
     }
   },
   async created() {
+    if (window.Telegram && window.Telegram.WebApp) {
+      this.isTelegram = true;
+      this.initTelegramTheme();
+      this.setupTelegramBackButton();
+      
+      // Отключаем все подтверждения закрытия
+      window.Telegram.WebApp.disableClosingConfirmation();
+      
+      // Отключаем кнопку подтверждения изменений
+      window.Telegram.WebApp.MainButton.hide();
+      window.Telegram.WebApp.MainButton.offClick();
+      
+      // Блокируем появление кнопки "Continue" при прокрутке
+      window.Telegram.WebApp.enableClosingConfirmation();
+      
+      // Развернем приложение на весь экран
+      window.Telegram.WebApp.expand();
+    }
     // Проверяем, открыто ли приложение в Telegram
     if (window.Telegram && window.Telegram.WebApp) {
       this.isTelegram = true;
@@ -90,6 +115,19 @@ export default {
     this.isLoading = false;
   },
   methods: {
+    disableTelegramBehaviors() {
+      if (!this.isTelegram) return;
+      
+      const tg = window.Telegram.WebApp;
+      tg.MainButton.hide();
+      tg.MainButton.offClick();
+      tg.disableClosingConfirmation();
+      tg.BackButton.hide();
+      tg.setBackgroundColor(this.isDarkTheme ? '#18222d' : '#ffffff');
+      
+      // Блокируем стандартное поведение
+      document.body.style.overscrollBehavior = 'none';
+    },
     initTelegramTheme() {
       const WebApp = window.Telegram.WebApp;
       this.tgThemeParams = WebApp.themeParams || {};
@@ -110,10 +148,34 @@ export default {
     },
     setupTelegramBackButton() {
       const WebApp = window.Telegram.WebApp;
-      WebApp.BackButton.show();
+      WebApp.BackButton.hide(); // Сначала скрываем
+      
+      // Показываем только когда нужно
+      // WebApp.BackButton.show();
       WebApp.BackButton.onClick(() => {
         WebApp.close();
       });
+      
+      // Явно отключаем подтверждение
+      WebApp.disableClosingConfirmation();
+    }
+  }, 
+  mounted() {
+    if (this.isTelegram) {
+      const tg = window.Telegram.WebApp;
+      
+      // Гарантированно скрываем MainButton
+      tg.MainButton.hide();
+      tg.MainButton.offClick();
+      
+      // Отключаем подтверждение закрытия
+      tg.disableClosingConfirmation();
+      
+      // Настраиваем BackButton (если нужно)
+      tg.BackButton.hide();
+      
+      // Устанавливаем цвет фона, чтобы избежать "проседаний"
+      tg.setBackgroundColor(this.isDarkTheme ? '#18222d' : '#ffffff');
     }
   }
 }
@@ -129,17 +191,22 @@ export default {
   user-zoom: fixed
   box-sizing: border-box
 
+html, body 
+  overscroll-behavior-y: none
+  overscroll-behavior-x: none
+  .tg-theme 
+    overscroll-behavior: none
 html
   background-color: var(--tg-bg-color)
   height: 100%
   @include respond(big-screen)
     font-size: 82.5%
   @include respond(computer)
-    font-size: 80%
+    font-size: 79%
   @include respond(tab-lend)
-    font-size: 80%
-  @include respond(tab-port)
     font-size: 77.5%
+  @include respond(tab-port)
+    font-size: 75.5%
   @include respond(phone)
     font-size: 72.5%
   @include respond(small-phone)
@@ -158,6 +225,9 @@ body
   position: relative
   user-select: none
   -webkit-tap-highlight-color: transparent
+  @media (orientation: landscape) and (max-width: 1025px)
+    margin: 0
+    max-width: 100vw  
   
   // Применяем Telegram тему, если приложение открыто в Telegram
   &.tg-theme
@@ -171,11 +241,11 @@ body
 
 .container
   flex: 1
-  overflow-y: auto
+  overflow-y: hidden
   overflow-x: hidden
   width: 100%
   min-height: calc(100vh - #{$footer-height})
-  padding: 1.5rem
+  padding: 0 1.5rem
   position: relative
   z-index: 0
   // transition: all 0.3s ease
@@ -194,10 +264,17 @@ body
 .fade-enter,
 .fade-leave-to
   opacity: 0
-  transform: translateY(10px)
+  transform: translateY(1rem)
 
 // Стили для Telegram-кнопок
 .button-tg
   +telegram-button
   font-size: 1rem
+
+.container
+  @media (orientation: landscape) and (max-width: 1025px)
+    min-height: 100vh
+    width: calc(100vw - #{$footer-height}) // учитываем ширину бокового футера
+    padding-right: 1.5rem
+    padding-left: 1.5rem
 </style>

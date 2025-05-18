@@ -235,18 +235,18 @@ export default {
 
 .note-dialog
   background: $color-white
-  border-radius: 12px
+  border-radius: 1.2rem
   position: relative
   width: 38rem
   margin: 0 1rem
   max-width: 38rem
   max-height: 40rem
   padding: 1.5rem
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1)
+  box-shadow: 0 .4rem 2rem rgba(0, 0, 0, 0.1)
 
   .tg-theme &
     background: var(--tg-bg-color)
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3)
+    box-shadow: 0 .4rem 2rem rgba(0, 0, 0, 0.3)
 
 .dialog-title
   font-size: 1.5rem
@@ -260,7 +260,7 @@ export default {
   gap: 0.5rem
   margin-bottom: 1.5rem
   padding-bottom: 0.5rem
-  border-bottom: 1px solid rgba(var(--tg-text-color), 0.1)
+  border-bottom: .1rem solid rgba(var(--tg-text-color), 0.1)
 
 .dialog-lesson
   font-weight: 500
@@ -280,8 +280,8 @@ export default {
   height: 20rem
   resize: none
   padding: 1rem
-  border: 1px solid rgba(var(--tg-text-color), 0.2)
-  border-radius: 8px
+  border: .1rem solid rgba(var(--tg-text-color), 0.2)
+  border-radius: .8rem
   font-family: inherit
   font-size: 1.1rem
   margin-bottom: 1.5rem
@@ -312,7 +312,7 @@ export default {
 
 .dialog-button
   padding: 0.7rem 1rem
-  border-radius: 8px
+  border-radius: .8rem
   cursor: pointer
   transition: all 0.2s ease
   border: none
@@ -375,15 +375,15 @@ export default {
 
 // Стили для скроллбара в модальном окне
 .note-dialog::-webkit-scrollbar
-  width: 6px
+  width: .6rem
 
 .note-dialog::-webkit-scrollbar-track
   background: rgba(0, 0, 0, 0.05)
-  border-radius: 3px
+  border-radius: .3rem
 
 .note-dialog::-webkit-scrollbar-thumb
   background: $color-light-green
-  border-radius: 3px
+  border-radius: .3rem
 
 .tg-theme .note-dialog::-webkit-scrollbar-thumb
   background: $color-light-green

@@ -391,7 +391,6 @@ export default {
   width: 100%
   background: var(--tg-secondary-bg-color)
   overflow: hidden
-  padding: 1.5rem
   color: var(--tg-text-color)
   
 
@@ -406,6 +405,7 @@ export default {
   flex: 1
   overflow-y: auto
   padding-right: 0.5rem
+  margin-bottom: 2rem
 
   // Стили для скроллбара в Telegram теме
   .tg-theme &
@@ -423,10 +423,10 @@ export default {
   transition: all 0.3s ease
   box-shadow: none
   margin-bottom: 0
-  border-left: 3px solid transparent
-  -webkit-box-shadow: 0px 6px 23px -15px rgba(6, 6, 6, 1);
-  -moz-box-shadow: 0px 6px 23px -15px rgba(6, 6, 6, 1);
-  box-shadow: 0px 6px 23px -15px rgba(6, 6, 6, 1);
+  border-left: .3rem solid transparent
+  -webkit-box-shadow: 0 .6rem 2.3rem -1.5rem rgba(6, 6, 6, 1)
+  -moz-box-shadow: 0 .6rem 2.3rem -1.5rem rgba(6, 6, 6, 1)
+  box-shadow: 0 .6rem 2.3rem -1.5rem rgba(6, 6, 6, 1)
 
   .tg-theme &
     background-color: var(--tg-bg-color)
@@ -535,7 +535,7 @@ export default {
   white-space: pre-line
   line-height: 1.5
   padding-top: 0.5rem
-  border-top: 1px solid rgba(var(--tg-text-color), 0.1)
+  border-top: .1rem solid rgba(var(--tg-text-color), 0.1)
   font-size: 1.1rem
 
   .tg-theme &
@@ -549,7 +549,7 @@ export default {
   min-height: 5rem
   max-height: 15rem
   padding: 0.8rem
-  border: 1px solid rgba(var(--tg-text-color), 0.2)
+  border: .1rem solid rgba(var(--tg-text-color), 0.2)
   border-radius: 0.5rem
   font-family: inherit
   font-size: 1.1rem
@@ -581,7 +581,7 @@ export default {
 
 .note-edit-cancel
   background: none
-  border: 1px solid rgba(var(--tg-text-color), 0.2)
+  border: .1rem solid rgba(var(--tg-text-color), 0.2)
   color: var(--tg-text-color)
 
   .tg-theme &
@@ -597,4 +597,8 @@ export default {
   color: var(--tg-hint-color)
   padding: 2rem
   font-size: 1.1rem
+
+.notes
+  @media (orientation: landscape) and (max-width: 1025px)
+    height: 100vh
 </style>

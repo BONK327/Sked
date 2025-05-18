@@ -113,13 +113,16 @@ export default {
   width: 100%
   min-height: 100%
   background-color: $color-table-border
-  border-radius: 0.3rem 0.3rem 0 0
+  border-radius: 0.5rem 0.5rem 0 0
   overflow: hidden
   margin-bottom: 1.5rem
   display: flex
   flex-direction: column
   user-select: none
   touch-action: pan-y // Разрешаем вертикальную прокрутку
+  cursor: grab 
+  // &:active
+  //   cursor: grabbing 
 
   &__title
     font-size: 1.5rem

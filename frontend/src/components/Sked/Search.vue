@@ -9,9 +9,13 @@
       </div>
     </transition>
     <div v-if="showSuggestions && suggestions.length > 0" class="suggestions">
-      <div v-for="(item, index) in suggestions" :key="item" class="suggestion-item"
-        :class="{ 'suggestion-active': index === activeSuggestionIndex }" @keyup.enter="handleEnter"
-        @mousedown.prevent="selectSuggestion(item)">
+      <div 
+        v-for="(item, index) in suggestions" 
+        :key="item" 
+        class="suggestion-item"
+        :class="{ 'suggestion-active': index === activeSuggestionIndex }"
+        @click="selectSuggestion(item)"
+      >
         {{ item }}
       </div>
     </div>
@@ -32,6 +36,12 @@ import { mapActions } from 'vuex'
 
 export default {
   name: 'Search',
+  props: {
+    placeholder: {
+      type: String, 
+      default: 'Группа, преподаватель, аудитория'
+    }
+  },
   data() {
     return {
       searchInput: '',
@@ -135,9 +145,11 @@ export default {
       }, 200);
     },
 
+     // Обработка нажатия Enter в поле ввода
     handleEnter() {
       if (this.activeSuggestionIndex >= 0 && this.suggestions.length) {
         this.selectSuggestion(this.suggestions[this.activeSuggestionIndex]);
+        this.handleSearch(); // Добавляем вызов поиска после выбора
       } else {
         this.handleSearch();
       }
@@ -312,30 +324,24 @@ export default {
           const apiQuery = this.formatTeacherForApi(query);
           const allTeachers = this.$store.getters.allTeachers || [];
 
-          // Если не удалось преобразовать ввод (нет совпадений)
           if (apiQuery === null) {
-            // Проверяем, есть ли вообще преподаватели с такой фамилией
             const sameLastNameTeachers = allTeachers.filter(t => {
               const parts = t.split(' ');
               return parts[0].toLowerCase() === query.toLowerCase().split(' ')[0];
             });
 
             if (sameLastNameTeachers.length > 0) {
-              // Если есть несколько преподавателей с такой фамилией
               const suggestions = sameLastNameTeachers
                 .map(t => this.formatTeacherForDisplay(t))
-                .slice(0, 3); // Показываем первые 3 варианта
-
+                .slice(0, 3);
               this.errorMessage = `Найдено несколько преподавателей. Уточните: ${suggestions.join(', ')}`;
             } else {
-              // Если вообще нет преподавателей с такой фамилией
               this.errorMessage = `Преподаватель не найден. Проверьте правильность ввода`;
             }
             setTimeout(() => this.errorMessage = '', 1000);
             return;
           }
 
-          // Проверяем точное соответствие
           const exists = allTeachers.some(t =>
             t.replace(/ /g, '_').toLowerCase() === apiQuery.toLowerCase()
           );
@@ -346,7 +352,8 @@ export default {
             return;
           }
 
-          await this.$store.dispatch('searchSchedule', {
+          // Эмитим событие с данными поиска
+          this.$emit('search', {
             type,
             query: apiQuery,
             displayQuery: this.formatTeacherForDisplay(apiQuery.replace(/_/g, ' '))
@@ -366,14 +373,14 @@ export default {
             return;
           }
 
-          await this.$store.dispatch('searchSchedule', {
+          // Эмитим событие с данными поиска
+          this.$emit('search', {
             type,
             query,
             displayQuery: query
           });
         }
 
-        // Очищаем поле поиска после успешного поиска
         this.searchInput = '';
         this.showSuggestions = false;
         this.activeSuggestionIndex = -1;
@@ -492,7 +499,16 @@ export default {
       this.searchInput = item;
       this.showSuggestions = false;
       this.activeSuggestionIndex = -1;
-      this.handleSearch();
+      
+      // Убираем вызов handleSearch() здесь
+      // Теперь поиск будет выполняться только при явном действии пользователя (нажатие Enter или кнопки поиска)
+      
+      // Фокусируемся обратно на поле ввода
+      this.$nextTick(() => {
+        if (this.$refs.searchInput) {
+          this.$refs.searchInput.focus();
+        }
+      });
     },
 
     // Навигация по подсказкам клавиатурой
@@ -547,22 +563,17 @@ export default {
 @import "@/assets/styles/variables.sass"
 @import "@/assets/styles/mixins.sass"
 
+/* Анимации */
+.slide-fade-enter-active
+  transition: all 0.3s ease-out
 
-.search-error
-  position: absolute
-  top: 18%
-  left: 5%
-  color: #ff4444
-  font-size: 0.9rem
-  padding: 0.5rem
-  background: #fff
-  border-radius: 0.3rem
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1)
-  z-index: 10
-  margin-top: 0.5rem
-  .tg-theme &
-    background-color: var(--tg-secondary-bg-color)
-    color: var(--tg-text-color)
+.slide-fade-leave-active
+  transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1)
+
+.slide-fade-enter-from,
+.slide-fade-leave-to
+  transform: translateY(-1rem)
+  opacity: 0
 
 .fade-enter-active,
 .fade-leave-active
@@ -571,8 +582,9 @@ export default {
 .fade-enter,
 .fade-leave-to
   opacity: 0
-  
+
 .search
+  position: relative
   display: flex
   flex-wrap: nowrap
   justify-content: space-between
@@ -612,44 +624,93 @@ export default {
       @include respond(phone)
         font-size: 1.4rem
 
-  &__loupe
-    position: relative
-    background-color: $color-light-green
+.suggestions
+  position: absolute
+  top: 100%
+  left: 0
+  right: 0
+  margin-top: 0.5rem
+  background: white
+  border-radius: 0.5rem
+  box-shadow: 0 .4rem .6rem rgba(0, 0, 0, 0.1)
+  z-index: 100
+  max-height: 30rem
+  overflow-y: auto
+  .tg-theme &
+    background-color: var(--tg-secondary-bg-color)
+    box-shadow: 0 .4rem .6rem rgba(0, 0, 0, 0.3)
+
+.suggestion-item
+  padding: 0.75rem 1rem
+  cursor: pointer
+  transition: background-color 0.2s
+  color: var(--app-text-color)
+  .tg-theme &
+    color: var(--tg-text-color)
+
+  &:hover
+    background-color: rgba(0, 0, 0, 0.05)
+    .tg-theme &
+      background-color: rgba(255, 255, 255, 0.1)
+
+  &.suggestion-active
+    background-color: rgba(0, 0, 0, 0.1)
+    .tg-theme &
+      background-color: rgba(255, 255, 255, 0.2)
+
+.search-error
+  position: absolute
+  top: 18%
+  left: 5%
+  color: #ff4444
+  font-size: 0.9rem
+  padding: 0.5rem
+  background: #fff
+  border-radius: 0.3rem
+  box-shadow: 0 .2rem .4rem rgba(0,0,0,0.1)
+  z-index: 10
+  margin-top: 0.5rem
+  .tg-theme &
+    background-color: var(--tg-secondary-bg-color)
+    color: var(--tg-text-color)
+
+.search__loupe
+  position: relative
+  background-color: $color-light-green
+  border-radius: 0.3rem
+  padding: 0.8rem
+  width: 3rem
+  height: 3rem
+  display: flex
+  align-items: center
+  justify-content: center
+  cursor: pointer
+
+  @include respond(small-phone)
+    height: 3.2rem
+    width: 3.2rem
+  @include respond(phone)
+    height: 3.4rem
+    width: 3.4rem
+
+  // Hover-эффекты только для устройств с мышью
+  @media (hover: hover) and (pointer: fine)
+    &:hover path
+      fill: $color-light-green
+    .tg-theme:hover path
+      fill: var(--tg-button-color)
+
+  &:after
+    content: ''
+    z-index: -1
+    position: absolute
+    bottom: -0.2rem
+    right: -0.1rem
+    width: 100%
+    height: 100%
     border-radius: 0.3rem
-    padding: 0.8rem
-    width: 3rem
-    height: 3rem
-    display: flex
-    align-items: center
-    justify-content: center
-    cursor: pointer
-  
-    
-    @include respond(small-phone)
-      height: 3.2rem
-      width: 3.2rem
-    @include respond(phone)
-      height: 3.4rem
-      width: 3.4rem
-
-    // Hover-эффекты только для устройств с мышью
-    @media (hover: hover) and (pointer: fine)
-      &:hover path
-        fill: $color-light-green
-      .tg-theme:hover path
-        fill: var(--tg-button-color)
-
-    &:after
-      content: ''
-      z-index: -1
-      position: absolute
-      bottom: -0.2rem
-      right: -0.1rem
-      width: 100%
-      height: 100%
-      border-radius: 0.3rem
-      background-color: $color-dark-green
-      .tg-theme &
-        background-color: var(--tg-button-color)
-        opacity: 0.8
+    background-color: $color-dark-green
+    .tg-theme &
+      background-color: var(--tg-button-color)
+      opacity: 0.8
 </style>

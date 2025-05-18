@@ -38,6 +38,7 @@
     align-items: center
     z-index: 9999
     transition: background-color 0.3s ease-out
+    cursor: wait
   
     &.tg-theme
       background-color: var(--tg-secondary-bg-color)
@@ -54,7 +55,7 @@
     &__spinner
       width: 5rem
       height: 5rem
-      border: 4px solid rgba($color-light-green, 0.2)
+      border: .4rem solid rgba($color-light-green, 0.2)
       border-radius: 50%
       border-top-color: $color-light-green
       animation: spin 1.5s ease infinite

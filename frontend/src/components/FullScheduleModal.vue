@@ -370,16 +370,16 @@ export default {
     width: .6rem
   &::-webkit-scrollbar-track
     background: rgba(0, 0, 0, 0.05)
-    border-radius: 3px
+    border-radius: .3rem
     .tg-theme.tg-dark &
       background: rgba(255, 255, 255, 0.1)
   &::-webkit-scrollbar-thumb
     background: $color-light-green
-    border-radius: 3px
+    border-radius: .3rem
 
 .week-schedule
   display: grid
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr))
+  grid-template-columns: repeat(auto-fit, minmax(30rem, 1fr))
   gap: 1.5rem
 
 .loading

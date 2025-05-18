@@ -1,8 +1,8 @@
 import { createStore } from 'vuex'
 import { convertNumberToTime, convertToDate, getNumberFromTime } from '../components/utils/notes';
 
-//const localhost = "0n3jzfgz-3000.inc1.devtunnels.ms";
-const localhost = "localhost:3000";
+const localhost = "0n3jzfgz-3000.inc1.devtunnels.ms";
+// const localhost = "localhost:3000";
 // В хранилище добавляем:
 function getAcademicWeekNumber(date = new Date()) {
     // Учебный год начинается 1 сентября
@@ -386,6 +386,17 @@ export default createStore({
             }
         },
 
+        async fetchSchedule1({ commit }, { dayIndex }) {
+            const response = await api.get('/schedule1', { params: { dayIndex } })
+            commit('SET_SCHEDULE1', response.data)
+            return response.data
+        },
+        
+        async fetchSchedule2({ commit }, { dayIndex }) {
+            const response = await api.get('/schedule2', { params: { dayIndex } })
+            commit('SET_SCHEDULE2', response.data)
+            return response.data
+        },
         async fetchFullWeekSchedule({ commit, state, dispatch }) {
             try {
                 commit('SET_LOADING', true);
@@ -416,7 +427,7 @@ export default createStore({
                         return;
                 }
 
-                const response = await fetch(`http://${localhost}/api/${endpoint}/${query}`);
+                const response = await fetch(`https://${localhost}/api/${endpoint}/${query}`);
                 if (!response.ok) throw new Error('Ошибка загрузки расписания');
 
                 const scheduleData = await response.json();
@@ -519,7 +530,7 @@ export default createStore({
 
         async fetchAllDataLists({ commit }) {
             try {
-                const response = await fetch(`http://localhost:3000/api/users`, {
+                const response = await fetch(`https://${localhost}/api/users`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -589,7 +600,7 @@ export default createStore({
                     text: text?.toString() || " "
                 };
                 //console.log('Sending to server:', requestBody) // Логируем отправляемые данные
-                const response = await fetch(`http://localhost:3000/api/notes/add`, {
+                const response = await fetch(`https://${localhost}/api/notes/add`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(requestBody)
@@ -605,7 +616,7 @@ export default createStore({
 
         async deleteNoteFromServer({ state }, { numWeek, numDay, num }) {
             try {
-                const response = await fetch(`http://${localhost}/api/notes/remove`, {
+                const response = await fetch(`https://${localhost}/api/notes/remove`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -717,20 +728,7 @@ export default createStore({
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        
         setCurrentWeekType({ commit }, weekType) {
             commit('SET_CURRENT_WEEK_TYPE', weekType);
         },
