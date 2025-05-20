@@ -1,64 +1,45 @@
 <template>
-  <div class="double-view" :class="{ 'tg-theme': isTelegram }" :data-theme="isDarkTheme ? 'dark' : 'light'">
-    <div class="double-content">
-      <!-- Первый блок (десктоп и мобильный) -->
-      <div class="double-search-block">
-        <div class="search-block">
-          <div class="search-result">
-            <h1 class="result-text">{{ searchResult1 || formattedGroupName }}</h1>
-          </div>
-          <Search 
-            ref="search1"
-            placeholder="Группа, преподаватель, аудитория"
-            @search="handleSearch(0, $event)"
-          />
-        </div>
+  <div class="double-view">
+    <div v-if="isLoading" class="loading">Загрузка...</div>
+    <div v-else class="double-content">
+      <div class="double-view" :class="{ 'tg-theme': isTelegram }" :data-theme="isDarkTheme ? 'dark' : 'light'">
+        <div class="double-content">
+          <div class="double-search-block">
+            <div class="search-block">
+              <div class="search-result">
+                <h1 class="result-text">{{ formattedFirstTitle || 'Первое расписание' }}</h1>
+              </div>
+              <Search ref="search1" placeholder="Группа, преподаватель, аудитория" @search="handleFirstSearch" />
+            </div>
 
-        <!-- Второй блок (десктоп и мобильный) -->
-        <div class="search-block">
-          <div class="search-result">
-            <h1 class="result-text">{{ searchResult2 || formattedGroupName }}</h1>
+            <div class="search-block">
+              <div class="search-result">
+                <h1 class="result-text">{{ formattedSecondTitle || 'Второе расписание' }}</h1>
+              </div>
+              <Search ref="search2" placeholder="Группа, преподаватель, аудитория" @search="handleSecondSearch" />
+            </div>
           </div>
-          <Search 
-            ref="search2"
-            placeholder="Группа, преподаватель, аудитория"
-            @search="handleSearch(1, $event)"
-          />
+
+          <div class="week-switcher">
+            <button class="week-button" :class="{ 'active': currentDoubleWeek === 1 }" @click="setCurrentWeek(1)">
+              Неделя 1
+            </button>
+            <button class="week-button" :class="{ 'active': currentDoubleWeek === 2 }" @click="setCurrentWeek(2)">
+              Неделя 2
+            </button>
+          </div>
+
+          <DoubleWeekSchedule :first-schedule="doubleSchedules.first" :second-schedule="doubleSchedules.second"
+            :first-title="firstTitle" :second-title="secondTitle" :current-week="currentDoubleWeek" />
         </div>
       </div>
-
-      <!-- Переключатель недель -->
-      <div class="week-switcher">
-        <button 
-          class="week-button"
-          :class="{ 'active': currentWeek === 1 }"
-          @click="setCurrentWeek(1)"
-        >
-          Неделя 1
-        </button>
-        <button 
-          class="week-button"
-          :class="{ 'active': currentWeek === 2 }"
-          @click="setCurrentWeek(2)"
-        >
-          Неделя 2
-        </button>
-      </div>
-    
-      <DoubleWeekSchedule 
-        :currentWeekSchedule="week1Schedule"
-        :nextWeekSchedule="week2Schedule"
-        :firstWeekTitle="searchResult1"
-        :secondWeekTitle="searchResult2"
-      />
     </div>
   </div>
 </template>
-
 <script>
 import Search from '@/components/Sked/Search.vue'
 import DoubleWeekSchedule from '@/components/double/DoubleWeekSchedule.vue'
-import { mapGetters, mapActions } from 'vuex'
+import { mapGetters, mapActions, mapMutations } from 'vuex'
 
 export default {
   name: 'Double',
@@ -67,58 +48,112 @@ export default {
     return {
       isTelegram: window.Telegram && window.Telegram.WebApp,
       isDarkTheme: false,
-      searchResult1: '',
-      searchResult2: '',
-      currentWeek: 1 // Текущая выбранная неделя
+      firstTitle: '',
+      secondTitle: '',
+      firstSearchParams: null,
+      secondSearchParams: null,
+      isLoading: false
     }
   },
   computed: {
-    ...mapGetters([
-      'weeksData',
-      'currentGroup'
-    ]),
-    week1Schedule() {
-      return this.weeksData?.week1 || []
+    ...mapGetters(['currentDoubleWeek']),
+    doubleSchedules() {
+      return this.$store.state.doubleSchedules || {
+        first: { week1: {}, week2: {} },
+        second: { week1: {}, week2: {} }
+      };
     },
-    week2Schedule() {
-      return this.weeksData?.week2 || []
+    formattedFirstTitle() {
+      return this.formatTitle(this.firstTitle, this.firstSearchParams?.type);
     },
-    formattedGroupName() {
-      if (!this.currentGroup) return '';
-      const firstDigitIndex = this.currentGroup.search(/\d/);
-      if (firstDigitIndex === -1) return this.currentGroup.toUpperCase();
-      
-      const letters = this.currentGroup.slice(0, firstDigitIndex).toUpperCase();
-      const numbers = this.currentGroup.slice(firstDigitIndex);
-      return letters + numbers;
+    formattedSecondTitle() {
+      return this.formatTitle(this.secondTitle, this.secondSearchParams?.type);
+    },
+    currentDoubleWeek() {
+      return this.$store.state.currentDoubleWeek;
     }
   },
   methods: {
-    ...mapActions([
-      'fetchFullWeekSchedule',
-      'searchSchedule',
-      'setCurrentWeekNumber'
-    ]),
-    
-    handleSearch(weekIndex, { type, query }) {
-      this.searchSchedule({
-        type,
-        query,
-        week: weekIndex === 0 ? 'week1' : 'week2'
-      });
-      
-      if (weekIndex === 0) {
-        this.searchResult1 = query || this.formattedGroupName;
-      } else {
-        this.searchResult2 = query || this.formattedGroupName;
+    ...mapActions(['searchSchedule']),
+    ...mapMutations(['SET_CURRENT_DOUBLE_WEEK']),
+
+    async handleFirstSearch({ type, query, displayQuery }) {
+      try {
+        this.isLoading = true;
+        this.firstSearchParams = { type, query };
+        this.firstTitle = this.formatTitle(displayQuery || query, type);
+
+        await this.$store.dispatch('searchSchedule', {
+          type,
+          query,
+          isDouble: true,
+          scheduleKey: 'first'
+        });
+
+        // Сохраняем тип поиска в хранилище
+        this.$store.commit('SET_DOUBLE_SCHEDULE_TYPE', {
+          key: 'first',
+          type
+        });
+
+      } catch (error) {
+        console.error('Ошибка загрузки первого расписания:', error);
+      } finally {
+        this.isLoading = false;
       }
     },
-    
-    setCurrentWeek(weekNumber) {
-      this.currentWeek = weekNumber;
-      this.setCurrentWeekNumber(weekNumber);
+
+    async handleSecondSearch({ type, query, displayQuery }) {
+      try {
+        this.isLoading = true;
+        this.secondSearchParams = { type, query };
+        this.secondTitle = this.formatTitle(displayQuery || query, type);
+
+        await this.$store.dispatch('searchSchedule', {
+          type,
+          query,
+          isDouble: true,
+          scheduleKey: 'second'
+        });
+
+        // Сохраняем тип поиска в хранилище
+        this.$store.commit('SET_DOUBLE_SCHEDULE_TYPE', {
+          key: 'second',
+          type
+        });
+
+      } catch (error) {
+        console.error('Ошибка загрузки второго расписания:', error);
+      } finally {
+        this.isLoading = false;
+      }
     },
-    
+
+    formatTitle(title, type) {
+      if (!title) return '';
+
+      // Для групп (ПИ2303)
+      if (type === 'group') {
+        const firstDigitIndex = title.search(/\d/);
+        if (firstDigitIndex === -1) return title.toUpperCase();
+        const letters = title.slice(0, firstDigitIndex).toUpperCase();
+        const numbers = title.slice(firstDigitIndex);
+        return letters + numbers;
+      }
+      // Для аудиторий (219гл)
+      else if (type === 'room') {
+        return title.replace(/(\d+)([А-ЯЁ]+)/, (_, num, letters) =>
+          num + letters.toLowerCase()
+        );
+      }
+      // Для преподавателей оставляем как есть
+      return title;
+    },
+
+    setCurrentWeek(weekNumber) {
+      this.$store.commit('SET_CURRENT_DOUBLE_WEEK', weekNumber);
+    },
+
     initTelegramTheme() {
       if (this.isTelegram) {
         const WebApp = window.Telegram.WebApp;
@@ -127,17 +162,16 @@ export default {
         WebApp.onEvent('themeChanged', this.applyTelegramTheme);
       }
     },
+
     applyTelegramTheme() {
       const WebApp = window.Telegram.WebApp;
       this.isDarkTheme = WebApp.colorScheme === 'dark';
-    }
+    },
+
   },
-  async created() {
+  created() {
     this.initTelegramTheme();
-    await this.fetchFullWeekSchedule();
-    this.searchResult1 = this.formattedGroupName;
-    this.searchResult2 = this.formattedGroupName;
-  }
+  },
 }
 </script>
 

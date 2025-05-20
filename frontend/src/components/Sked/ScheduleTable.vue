@@ -135,6 +135,8 @@ export default {
     border-collapse: collapse
     display: flex
     flex-direction: column
+    &:active
+      cursor: grabbing
     &-row
       position: relative
       display: flex

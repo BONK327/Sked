@@ -4,85 +4,61 @@
       <div v-for="(day, dayIndex) in weekDays" :key="dayIndex" class="day-section">
         <h3 class="day-title">{{ day.fullName }}</h3>
         <div class="double-table-container">
-          <!-- Первая неделя -->
+          <!-- Первое расписание -->
           <div class="table-wrapper">
             <div class="table">
-              <h4 class="table__title">{{ firstWeekTitle || 'Первое расписание' }}</h4>
+              <h4 class="table__title">{{ firstTitle || 'Первое расписание' }}</h4>
               <div class="table__content">
-                <div 
-                  v-for="(row, rowIndex) in getTimeSlotsForDay(dayIndex)" 
-                  :key="'week1-' + rowIndex" 
-                  class="table__content-row"
-                >
+                <div v-for="(row, rowIndex) in getTimeSlotsForDay(dayIndex)" :key="'first-' + rowIndex"
+                  class="table__content-row">
                   <div class="table__content-row-time" v-html="row.time"></div>
-                  <div 
-                    class="table__content-row-color" 
-                    :class="{
-                      'table__content-row-color--lection': isLection(row.type),
-                      'table__content-row-color--seminar': !isLection(row.type)
-                    }"
-                  ></div>
+                  <div class="table__content-row-color" :class="{
+                    'table__content-row-color--lection': getLessonType(dayIndex, row.time, 'first') === 'lection',
+                    'table__content-row-color--seminar': getLessonType(dayIndex, row.time, 'first') !== 'lection'
+                  }"></div>
                   <div class="table__content-row-lesson">
-                    <template v-if="getLessonForDay(dayIndex, row.time, 0)">
+                    <template v-if="getLessonForDay(dayIndex, row.time, 'first')">
                       <span class="table__content-row-lesson--class">
-                        {{ getLessonForDay(dayIndex, row.time, 0).subject }}
+                        {{ getLessonName(dayIndex, row.time, 'first') }}
                       </span>
-                      <span class="table__content-row-lesson--details">
-                        Креймер Алексей Семенович
-                      </span>
-                      <span class="table__content-row-lesson--details">
-                        {{ getLessonForDay(dayIndex, row.time, 0).group }}
-                      </span>
+                      <span class="table__content-row-lesson--details"
+                        v-html="getMainDetails(dayIndex, row.time, 'first')"></span>
                     </template>
                     <template v-else>
-                      <span class="table__content-row-lesson--class">Веб-дизайн и интернет программирование</span>
+                      <span class="table__content-row-lesson--class"></span>
                     </template>
                   </div>
-                  <div class="table__content-row-room">
-                    221гл
-                  </div>
+                  <div class="table__content-row-room" v-html="getRoomDetails(dayIndex, row.time, 'first')"></div>
                 </div>
               </div>
             </div>
           </div>
-          
-          <!-- Вторая неделя -->
+
+          <!-- Второе расписание -->
           <div class="table-wrapper">
             <div class="table">
-              <h4 class="table__title">{{ secondWeekTitle || 'Второе расписание' }}</h4>
+              <h4 class="table__title">{{ secondTitle || 'Второе расписание' }}</h4>
               <div class="table__content">
-                <div 
-                  v-for="(row, rowIndex) in getTimeSlotsForDay(dayIndex)" 
-                  :key="'week2-' + rowIndex" 
-                  class="table__content-row"
-                >
+                <div v-for="(row, rowIndex) in getTimeSlotsForDay(dayIndex)" :key="'second-' + rowIndex"
+                  class="table__content-row">
                   <div class="table__content-row-time" v-html="row.time"></div>
-                  <div 
-                    class="table__content-row-color" 
-                    :class="{
-                      'table__content-row-color--lection': isLection(row.type),
-                      'table__content-row-color--seminar': !isLection(row.type)
-                    }"
-                  ></div>
+                  <div class="table__content-row-color" :class="{
+                    'table__content-row-color--lection': getLessonType(dayIndex, row.time, 'second') === 'lection',
+                    'table__content-row-color--seminar': getLessonType(dayIndex, row.time, 'second') !== 'lection'
+                  }"></div>
                   <div class="table__content-row-lesson">
-                    <template v-if="getLessonForDay(dayIndex, row.time, 1)">
+                    <template v-if="getLessonForDay(dayIndex, row.time, 'second')">
                       <span class="table__content-row-lesson--class">
-                        {{ getLessonForDay(dayIndex, row.time, 1).subject }}
+                        {{ getLessonName(dayIndex, row.time, 'second') }}
                       </span>
-                      <span class="table__content-row-lesson--details">
-                        Креймер Алексей Семенович
-                      </span>
-                      <span class="table__content-row-lesson--details">
-                        {{ getLessonForDay(dayIndex, row.time, 1).group }}
-                      </span>
+                      <span class="table__content-row-lesson--details"
+                        v-html="getMainDetails(dayIndex, row.time, 'second')"></span>
                     </template>
                     <template v-else>
-                      <span class="table__content-row-lesson--class">Нет занятий</span>
+                      <span class="table__content-row-lesson--class"></span>
                     </template>
                   </div>
-                  <div class="table__content-row-room">
-                    {{ getLessonForDay(dayIndex, row.time, 1)?.room || '' }}
-                  </div>
+                  <div class="table__content-row-room" v-html="getRoomDetails(dayIndex, row.time, 'second')"></div>
                 </div>
               </div>
             </div>
@@ -92,7 +68,6 @@
     </div>
   </div>
 </template>
-
 <script>
 const defaultRows = [
   { time: '08:00<br>09:30', type: 'seminar' },
@@ -100,8 +75,8 @@ const defaultRows = [
   { time: '11:30<br>13:00', type: 'seminar' },
   { time: '13:50<br>15:20', type: 'seminar' },
   { time: '15:35<br>17:05', type: 'seminar' },
-  { time: '17:20<br>18:50', type: 'seminar' },
-]
+  { time: '17:20<br>18:50', type: 'seminar' }
+];
 
 const saturdayRows = [
   { time: '08:00<br>09:30', type: 'seminar' },
@@ -109,27 +84,25 @@ const saturdayRows = [
   { time: '11:30<br>13:00', type: 'seminar' },
   { time: '13:15<br>14:45', type: 'seminar' },
   { time: '15:00<br>16:30', type: 'seminar' },
-  { time: '16:45<br>18:15', type: 'seminar' },
-]
+  { time: '16:45<br>18:15', type: 'seminar' }
+];
 
 export default {
   name: 'DoubleWeekSchedule',
   props: {
-    currentWeekSchedule: {
-      type: Array,
-      default: () => []
+    firstSchedule: {
+      type: Object,
+      default: () => ({})
     },
-    nextWeekSchedule: {
-      type: Array,
-      default: () => []
+    secondSchedule: {
+      type: Object,
+      default: () => ({})
     },
-    firstWeekTitle: {
-      type: String,
-      default: 'Введите группу/преподавателя/аудиторию'
-    },
-    secondWeekTitle: {
-      type: String,
-      default: 'Введите группу/преподавателя/аудиторию'
+    firstTitle: String,
+    secondTitle: String,
+    currentWeek: {
+      type: Number,
+      default: 1
     }
   },
   data() {
@@ -144,26 +117,172 @@ export default {
       ]
     }
   },
+  computed: {
+    formattedFirstSchedule() {
+      const weekKey = `week${this.currentWeek}`;
+      return this.firstSchedule[weekKey] || {};
+    },
+    formattedSecondSchedule() {
+      const weekKey = `week${this.currentWeek}`;
+      return this.secondSchedule[weekKey] || {};
+    }
+  },
   methods: {
     getTimeSlotsForDay(dayIndex) {
-      return dayIndex === 5 ? saturdayRows : defaultRows
+      return dayIndex === 5 ? saturdayRows : defaultRows;
     },
-    getLessonsForDay(dayIndex, weekIndex) {
-      return weekIndex === 0 
-        ? this.currentWeekSchedule[dayIndex] || []
-        : this.nextWeekSchedule[dayIndex] || []
+
+    getLessonsForDay(dayIndex, scheduleKey) {
+      const schedule = scheduleKey === 'first'
+        ? this.formattedFirstSchedule
+        : this.formattedSecondSchedule;
+      const lessons = schedule[dayIndex] || [];
+      return lessons;
     },
-    getLessonForDay(dayIndex, time, weekIndex) {
-      const lessons = this.getLessonsForDay(dayIndex, weekIndex)
-      return lessons.find(lesson => lesson.time === time.replace('<br>', ' ')) || null
+
+    getLessonForDay(dayIndex, time, scheduleKey) {
+      const lessons = this.getLessonsForDay(dayIndex, scheduleKey);
+      const timeToCompare = time.replace('<br>', ' ');
+
+      const foundLesson = lessons.find(lesson => {
+        if (!lesson.time) return false;
+        const lessonTime = lesson.time.replace('<br>', ' ');
+        return lessonTime === timeToCompare;
+      });
+
+
+      return foundLesson || null;
     },
-    isLection(type) {
-      return type === 'lection'
+
+    getLessonName(dayIndex, time, scheduleKey) {
+      const lesson = this.getLessonForDay(dayIndex, time, scheduleKey);
+      return lesson?.name || '';
     },
+
+    getLessonType(dayIndex, time, scheduleKey) {
+      const lesson = this.getLessonForDay(dayIndex, time, scheduleKey);
+      return lesson?.type || 'seminar';
+    },
+
+    getMainDetails(dayIndex, time, scheduleKey) {
+      const lesson = this.getLessonForDay(dayIndex, time, scheduleKey);
+      if (!lesson) return '';
+
+      const searchType = this.$store.state.doubleSchedules[scheduleKey === 'first' ? 'first' : 'second'].type;
+
+      if (searchType === 'room') {
+        // Форматирование как в обычном расписании
+        const teachers = lesson.details?.map(d => {
+          if (!d?.name) return '';
+          const nameParts = d.name.split(' ');
+          return nameParts[0] + ' ' +
+            (nameParts[1]?.[0] || '') + '.' +
+            (nameParts[2]?.[0] || '.');
+        }).filter(Boolean).join('<br>') || '';
+
+        return `${teachers}<br>`;
+      }
+      else if (searchType === 'teacher') {
+        return lesson.details?.map(d =>
+          d.group + (d.subgroup ? `(${d.subgroup})` : '')
+        ).join('<br>') || '';
+      }
+      else {
+        return lesson.teachers?.map(t => {
+          if (!t?.name) return '';
+          const nameParts = t.name.split(' ');
+          return nameParts[0] + ' ' +
+            (nameParts[1]?.[0] || '') + '.' +
+            (nameParts[2]?.[0] || '.') +
+            (t.subgroup ? `(${t.subgroup})` : '');
+        }).join('<br>') || '';
+      }
+    },
+
+    getRoomDetails(dayIndex, time, scheduleKey) {
+      const lesson = this.getLessonForDay(dayIndex, time, scheduleKey);
+      if (!lesson) return '';
+
+      const searchType = this.$store.state.doubleSchedules[scheduleKey === 'first' ? 'first' : 'second'].type;
+
+      if (searchType === 'room') {
+        return lesson.details?.flatMap(d =>
+          d.groups?.map(g => g.group.split('(')[0])
+        ).filter(Boolean).join('<br>') || '';
+      }
+      else if (searchType === 'teacher') {
+        return lesson.room || '';
+      }
+      else {
+        return lesson.teachers?.map(t =>
+          t.room.toLowerCase() + (t.subgroup ? `(${t.subgroup})` : '')
+        ).join('<br>') || '';
+      }
+    },
+
+    formatTeachersWithSubgroups(items) {
+      if (!items || !items.length) return '';
+
+      const uniqueTeachers = new Map();
+      items.forEach(item => {
+        const teacherName = item.name || item.teacher || '';
+        const subgroup = item.subgroup || (item.groups?.[0]?.subgroup) || '';
+
+        if (teacherName) {
+          if (!uniqueTeachers.has(teacherName)) {
+            uniqueTeachers.set(teacherName, new Set());
+          }
+          if (subgroup) {
+            uniqueTeachers.get(teacherName).add(subgroup);
+          }
+        }
+      });
+
+      return [...uniqueTeachers.entries()].map(([name, subgroups]) => {
+        return subgroups.size > 0 ? `${name}(${[...subgroups].join(',')})` : name;
+      }).join('<br>');
+    },
+
+    formatGroupsWithSubgroups(groups) {
+      if (!groups) return '';
+
+      return groups.map(g => {
+        let str = g.group;
+        if (g.subgroup) str += `(${g.subgroup})`;
+        return str;
+      }).join('<br>');
+    },
+
+    formatRoomsWithSubgroups(items) {
+      if (!items) return '';
+
+      const roomMap = new Map();
+      const allSubgroups = new Set();
+
+      items.forEach(item => {
+        if (item.subgroup) allSubgroups.add(item.subgroup);
+        if (item.room) {
+          if (!roomMap.has(item.room)) {
+            roomMap.set(item.room, new Set());
+          }
+          if (item.subgroup) {
+            roomMap.get(item.room).add(item.subgroup);
+          }
+        }
+      });
+
+      return [...roomMap.entries()].map(([room, subgroups]) => {
+        return subgroups.size > 0 && subgroups.size !== allSubgroups.size
+          ? `${room}(${[...subgroups].join(',')})`
+          : room;
+      }).join('<br>');
+    }
   },
   mounted() {
-    this.initTelegramScroll();
-  }
+    if (this.isTelegram) {
+      this.$refs.scrollContainer.style.overscrollBehavior = 'none';
+    }
+  },
 }
 </script>
 
@@ -200,7 +319,7 @@ export default {
   overflow: visible /* Важно! */
 
   &:last-child
-    margin-bottom: 2rem 
+    margin-bottom: calc(2rem + #{$footer-height})
 
   // Медиазапросы для разных устройств
   @include respond(small-phone)
@@ -312,6 +431,8 @@ export default {
     width: 100%
     display: flex
     flex-direction: column
+    &:active
+      cursor: grabbing
 
     &-row
       position: relative

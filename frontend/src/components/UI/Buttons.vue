@@ -82,6 +82,8 @@ export default {
   justify-content: space-evenly
   cursor: pointer
   transition: all .2s ease
+  &:active
+    transform: scale(.96)
 
   // Hover-эффекты только для устройств с мышью
   @media (hover: hover) and (pointer: fine)

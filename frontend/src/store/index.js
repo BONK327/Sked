@@ -1,8 +1,8 @@
 import { createStore } from 'vuex'
 import { convertNumberToTime, convertToDate, getNumberFromTime } from '../components/utils/notes';
-
-const localhost = "0n3jzfgz-3000.inc1.devtunnels.ms";
-// const localhost = "localhost:3000";
+import { reactive } from 'vue';
+//const localhost = "0n3jzfgz-3000.inc1.devtunnels.ms";
+const localhost = "localhost:3000";
 // В хранилище добавляем:
 function getAcademicWeekNumber(date = new Date()) {
     // Учебный год начинается 1 сентября
@@ -22,6 +22,17 @@ function getAcademicWeekNumber(date = new Date()) {
     // Номер недели (1 или 2)
     return ((diffWeeks + 1) % 2) + 1;
 }
+function getTimeString(number, isSaturday) {
+    const times = isSaturday ? [
+        '08:00<br>09:30', '09:45<br>11:15', '11:30<br>13:00',
+        '13:15<br>14:45', '15:00<br>16:30', '16:45<br>18:15'
+    ] : [
+        '08:00<br>09:30', '09:45<br>11:15', '11:30<br>13:00',
+        '13:50<br>15:20', '15:35<br>17:05', '17:20<br>18:50'
+    ];
+    return times[number - 1] || '';
+}
+
 export default createStore({
     state: {
         notes: JSON.parse(localStorage.getItem('notes')) || [],
@@ -59,8 +70,19 @@ export default createStore({
         allRooms: [],
         userNotes: [],
         userId: 123231, // Временный ID, позже заменим на Telegram ID
-        serverNotes: [] // Заметки из БД
+        serverNotes: [],// Заметки из БД
 
+        doubleSchedules: {
+            first: {
+                week1: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
+                week2: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
+            },
+            second: {
+                week1: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
+                week2: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
+            }
+        },
+        currentDoubleWeek: 1,
 
     },
     mutations: {
@@ -215,7 +237,37 @@ export default createStore({
             state.noteDialog.isOpen = true;
             state.noteDialog.noteId = noteId;
             state.noteDialog.forceUpdate = Date.now(); // Добавляем триггер для обновления
-        }
+        },
+        SET_DOUBLE_SCHEDULE(state, { key, scheduleData }) {
+            if (!state.doubleSchedules[key]) {
+                state.doubleSchedules[key] = {
+                    week1: {}, week2: {},
+                    type: scheduleData.type // сохраняем тип поиска
+                };
+            }
+        },
+        SET_DOUBLE_WEEK_SCHEDULE(state, { key, weekType, dayIndex, schedule }) {
+            if (!state.doubleSchedules[key]) {
+                state.doubleSchedules[key] = reactive({
+                    week1: reactive({}),
+                    week2: reactive({})
+                });
+            }
+
+            if (!state.doubleSchedules[key][weekType]) {
+                state.doubleSchedules[key][weekType] = reactive({});
+            }
+
+            state.doubleSchedules[key][weekType][dayIndex] = schedule;
+        },
+        SET_CURRENT_DOUBLE_WEEK(state, weekNumber) {
+            state.currentDoubleWeek = weekNumber;
+        },
+        SET_DOUBLE_SCHEDULE_TYPE(state, { key, type }) {
+            if (state.doubleSchedules[key]) {
+                state.doubleSchedules[key].type = type;
+            }
+        },
 
 
 
@@ -359,31 +411,132 @@ export default createStore({
 
 
 
-        async searchSchedule({ commit, dispatch }, { type, query }) {
+        async searchSchedule({ commit, dispatch }, { type, query, isDouble = false, scheduleKey = null }) {
             try {
                 commit('SET_LOADING', true);
-                commit('CLEAR_SCHEDULE');
-                commit('CLEAR_SEARCH');
+                if (!isDouble) {
+                    commit('CLEAR_SCHEDULE');
+                    commit('CLEAR_SEARCH');
+                }
 
                 switch (type) {
                     case 'group':
-                        commit('SET_CURRENT_GROUP', query);
+                        if (!isDouble) commit('SET_CURRENT_GROUP', query);
                         break;
                     case 'teacher':
-                        commit('SET_CURRENT_TEACHER', query);
+                        if (!isDouble) commit('SET_CURRENT_TEACHER', query);
                         break;
                     case 'room':
-                        commit('SET_CURRENT_ROOM', query);
+                        if (!isDouble) commit('SET_CURRENT_ROOM', query);
                         break;
                 }
 
-                await dispatch('fetchFullWeekSchedule');
+                const response = await fetch(`http://${localhost}/api/${type}s/${encodeURIComponent(query)}`);
+                if (!response.ok) throw new Error('Ошибка загрузки расписания');
+                const scheduleData = await response.json();
+
+                if (isDouble && scheduleKey) {
+                    await dispatch('processDoubleScheduleData', { scheduleData, scheduleKey });
+                } else {
+                    await dispatch('processScheduleData', { scheduleData, searchType: type });
+                }
             } catch (error) {
                 commit('SET_ERROR', error.message);
                 console.error('Ошибка поиска:', error);
+                throw error;
             } finally {
                 commit('SET_LOADING', false);
             }
+        },
+
+        // Добавьте новый action:
+
+        async processDoubleScheduleData({ commit, state }, { scheduleData, scheduleKey }) {
+
+            if (!scheduleData || !scheduleData.lessons) {
+                console.error('[processDoubleScheduleData] Нет данных или lessons');
+                return;
+            }
+
+            // Очищаем расписание
+            for (let week = 1; week <= 2; week++) {
+                for (let day = 0; day < 6; day++) {
+                    commit('SET_DOUBLE_WEEK_SCHEDULE', {
+                        key: scheduleKey,
+                        weekType: `week${week}`,
+                        dayIndex: day,
+                        schedule: []
+                    });
+                }
+            }
+
+            const formatTime = (number, isSaturday) => {
+                const times = isSaturday ? [
+                    '08:00<br>09:30', '09:45<br>11:15', '11:30<br>13:00',
+                    '13:15<br>14:45', '15:00<br>16:30', '16:45<br>18:15'
+                ] : [
+                    '08:00<br>09:30', '09:45<br>11:15', '11:30<br>13:00',
+                    '13:50<br>15:20', '15:35<br>17:05', '17:20<br>18:50'
+                ];
+                return times[number - 1] || '';
+            };
+
+            scheduleData.lessons.forEach((lesson, index) => {
+                const weekType = `week${lesson.numberWeek}`;
+                const dayIndex = lesson.numberDay - 1;
+                const isSaturday = lesson.numberDay === 6;
+                const time = getTimeString(lesson.number, isSaturday);
+
+
+                const transformedLesson = {
+                    time,
+                    type: lesson.type,
+                    name: lesson.name,
+                    weekNumber: lesson.numberWeek
+                };
+
+                if (scheduleData.type === 'group') {
+                    transformedLesson.teachers = lesson.details || [];
+                } else if (scheduleData.type === 'teacher') {
+                    transformedLesson.room = lesson.room || '';
+                    transformedLesson.details = lesson.details || [];
+
+                } else if (scheduleData.type === 'room') {
+                    transformedLesson.details = lesson.details?.map(d => ({
+                        name: d.name,
+                        groups: d.groups.map(g => ({
+                            group: g.group,
+                            subgroup: g.subgroup || ''
+                        }))
+                    })) || [];
+                }
+
+                const currentLessons = state.doubleSchedules[scheduleKey][weekType][dayIndex] || [];
+
+                commit('SET_DOUBLE_WEEK_SCHEDULE', {
+                    key: scheduleKey,
+                    weekType,
+                    dayIndex,
+                    schedule: [...currentLessons, transformedLesson]
+                });
+
+            });
+
+        },
+
+        // Добавить новый action:
+        async fetchScheduleData({ commit }, { type, query }) {
+            let endpoint;
+            switch (type) {
+                case 'group': endpoint = 'groups'; break;
+                case 'teacher': endpoint = 'teachers'; break;
+                case 'room': endpoint = 'rooms'; break;
+                default: throw new Error('Неизвестный тип поиска');
+            }
+
+            const response = await fetch(`http://${localhost}/api/${endpoint}/${encodeURIComponent(query)}`);
+            if (!response.ok) throw new Error('Ошибка загрузки расписания');
+            return await response.json();
         },
 
         async fetchSchedule1({ commit }, { dayIndex }) {
@@ -391,7 +544,7 @@ export default createStore({
             commit('SET_SCHEDULE1', response.data)
             return response.data
         },
-        
+
         async fetchSchedule2({ commit }, { dayIndex }) {
             const response = await api.get('/schedule2', { params: { dayIndex } })
             commit('SET_SCHEDULE2', response.data)
@@ -427,7 +580,7 @@ export default createStore({
                         return;
                 }
 
-                const response = await fetch(`https://${localhost}/api/${endpoint}/${query}`);
+                const response = await fetch(`http://${localhost}/api/${endpoint}/${query}`);
                 if (!response.ok) throw new Error('Ошибка загрузки расписания');
 
                 const scheduleData = await response.json();
@@ -435,15 +588,15 @@ export default createStore({
 
                 if (!state.baseWeekNumber) {
                     const calculatedWeek = getAcademicWeekNumber();
-                    console.log('Математически рассчитанная неделя:', calculatedWeek);
+                    //console.log('Математически рассчитанная неделя:', calculatedWeek);
 
                     const weeksInAPI = [...new Set(scheduleData.lessons.map(l => l.numberWeek))];
-                    console.log('Недели в API:', weeksInAPI);
+                    //console.log('Недели в API:', weeksInAPI);
 
                     const baseWeek = weeksInAPI.includes(calculatedWeek) ? calculatedWeek :
                         weeksInAPI.includes(1) ? 1 : 2;
 
-                    console.log('Установлена базовая неделя:', baseWeek);
+                    //console.log('Установлена базовая неделя:', baseWeek);
                     commit('SET_BASE_WEEK_NUMBER', baseWeek);
                     commit('SET_CURRENT_WEEK_NUMBER', baseWeek);
                     commit('SET_CURRENT_WEEK_TYPE', `week${baseWeek}`);
@@ -530,7 +683,7 @@ export default createStore({
 
         async fetchAllDataLists({ commit }) {
             try {
-                const response = await fetch(`https://${localhost}/api/users`, {
+                const response = await fetch(`http://${localhost}/api/users`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -545,7 +698,7 @@ export default createStore({
                 }
 
                 const data = await response.json();
-                console.log('Получены данные с сервера:', data); // Добавим лог для отладки
+                //console.log('Получены данные с сервера:', data); // Добавим лог для отладки
 
                 // Проверяем наличие notes в ответе
                 if (!data.notes) {
@@ -600,7 +753,7 @@ export default createStore({
                     text: text?.toString() || " "
                 };
                 //console.log('Sending to server:', requestBody) // Логируем отправляемые данные
-                const response = await fetch(`https://${localhost}/api/notes/add`, {
+                const response = await fetch(`http://${localhost}/api/notes/add`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(requestBody)
@@ -616,7 +769,7 @@ export default createStore({
 
         async deleteNoteFromServer({ state }, { numWeek, numDay, num }) {
             try {
-                const response = await fetch(`https://${localhost}/api/notes/remove`, {
+                const response = await fetch(`http://${localhost}/api/notes/remove`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -728,7 +881,7 @@ export default createStore({
 
 
 
-        
+
         setCurrentWeekType({ commit }, weekType) {
             commit('SET_CURRENT_WEEK_TYPE', weekType);
         },

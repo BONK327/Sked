@@ -20,13 +20,23 @@ const applyTelegramTheme = () => {
   root.style.setProperty('--tg-text-color', theme.text_color || '#000000')
   root.style.setProperty('--tg-button-color', theme.button_color || '#2481cc')
   root.style.setProperty('--tg-button-text-color', theme.button_text_color || '#ffffff')
-  
+
   // Добавляем класс для тёмной темы
   if (tg.colorScheme === 'dark') {
     document.body.classList.add('tg-dark')
   } else {
     document.body.classList.remove('tg-dark')
   }
+
+
+  plugins: [
+    store => {
+      store.subscribe((mutation, state) => {
+        console.log('[Vuex Mutation]', mutation.type, mutation.payload);
+        console.log('[Vuex State]', state);
+      });
+    }
+  ]
 }
 
 // Применяем тему при загрузке
