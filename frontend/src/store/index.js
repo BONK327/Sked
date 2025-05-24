@@ -1,8 +1,8 @@
 import { createStore } from 'vuex'
 import { convertNumberToTime, convertToDate, getNumberFromTime } from '../components/utils/notes';
 import { reactive } from 'vue';
-//const localhost = "0n3jzfgz-3000.inc1.devtunnels.ms";
-const localhost = "localhost:3000";
+const localhost = "https://0n3jzfgz-3000.inc1.devtunnels.ms";
+// const localhost = "http://localhost:3000";
 // В хранилище добавляем:
 function getAcademicWeekNumber(date = new Date()) {
     // Учебный год начинается 1 сентября
@@ -431,7 +431,7 @@ export default createStore({
                         break;
                 }
 
-                const response = await fetch(`http://${localhost}/api/${type}s/${encodeURIComponent(query)}`);
+                const response = await fetch(`${localhost}/api/${type}s/${encodeURIComponent(query)}`);
                 if (!response.ok) throw new Error('Ошибка загрузки расписания');
                 const scheduleData = await response.json();
 
@@ -534,7 +534,7 @@ export default createStore({
                 default: throw new Error('Неизвестный тип поиска');
             }
 
-            const response = await fetch(`http://${localhost}/api/${endpoint}/${encodeURIComponent(query)}`);
+            const response = await fetch(`${localhost}/api/${endpoint}/${encodeURIComponent(query)}`);
             if (!response.ok) throw new Error('Ошибка загрузки расписания');
             return await response.json();
         },
@@ -580,7 +580,7 @@ export default createStore({
                         return;
                 }
 
-                const response = await fetch(`http://${localhost}/api/${endpoint}/${query}`);
+                const response = await fetch(`${localhost}/api/${endpoint}/${query}`);
                 if (!response.ok) throw new Error('Ошибка загрузки расписания');
 
                 const scheduleData = await response.json();
@@ -683,7 +683,7 @@ export default createStore({
 
         async fetchAllDataLists({ commit }) {
             try {
-                const response = await fetch(`http://${localhost}/api/users`, {
+                const response = await fetch(`${localhost}/api/users`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -753,7 +753,7 @@ export default createStore({
                     text: text?.toString() || " "
                 };
                 //console.log('Sending to server:', requestBody) // Логируем отправляемые данные
-                const response = await fetch(`http://${localhost}/api/notes/add`, {
+                const response = await fetch(`${localhost}/api/notes/add`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(requestBody)
@@ -769,7 +769,7 @@ export default createStore({
 
         async deleteNoteFromServer({ state }, { numWeek, numDay, num }) {
             try {
-                const response = await fetch(`http://${localhost}/api/notes/remove`, {
+                const response = await fetch(`${localhost}/api/notes/remove`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

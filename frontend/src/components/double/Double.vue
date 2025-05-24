@@ -2,36 +2,39 @@
   <div class="double-view">
     <div v-if="isLoading" class="loading">Загрузка...</div>
     <div v-else class="double-content">
-      <div class="double-view" :class="{ 'tg-theme': isTelegram }" :data-theme="isDarkTheme ? 'dark' : 'light'">
-        <div class="double-content">
-          <div class="double-search-block">
-            <div class="search-block">
-              <div class="search-result">
-                <h1 class="result-text">{{ formattedFirstTitle || 'Первое расписание' }}</h1>
-              </div>
-              <Search ref="search1" placeholder="Группа, преподаватель, аудитория" @search="handleFirstSearch" />
+      <div class="double-container" :class="{ 'tg-theme': isTelegram }" :data-theme="isDarkTheme ? 'dark' : 'light'">
+        <div class="double-search-block">
+          <div class="search-block">
+            <div class="search-result">
+              <h1 class="result-text">{{ formattedFirstTitle || 'Первое расписание' }}</h1>
             </div>
-
-            <div class="search-block">
-              <div class="search-result">
-                <h1 class="result-text">{{ formattedSecondTitle || 'Второе расписание' }}</h1>
-              </div>
-              <Search ref="search2" placeholder="Группа, преподаватель, аудитория" @search="handleSecondSearch" />
-            </div>
+            <Search ref="search1" placeholder="Группа, преподаватель, аудитория" @search="handleFirstSearch" />
           </div>
 
-          <div class="week-switcher">
-            <button class="week-button" :class="{ 'active': currentDoubleWeek === 1 }" @click="setCurrentWeek(1)">
-              Неделя 1
-            </button>
-            <button class="week-button" :class="{ 'active': currentDoubleWeek === 2 }" @click="setCurrentWeek(2)">
-              Неделя 2
-            </button>
+          <div class="search-block">
+            <div class="search-result">
+              <h1 class="result-text">{{ formattedSecondTitle || 'Второе расписание' }}</h1>
+            </div>
+            <Search ref="search2" placeholder="Группа, преподаватель, аудитория" @search="handleSecondSearch" />
           </div>
-
-          <DoubleWeekSchedule :first-schedule="doubleSchedules.first" :second-schedule="doubleSchedules.second"
-            :first-title="firstTitle" :second-title="secondTitle" :current-week="currentDoubleWeek" />
         </div>
+
+        <div class="week-switcher">
+          <button class="week-button" :class="{ 'active': currentDoubleWeek === 1 }" @click="setCurrentWeek(1)">
+            Неделя 1
+          </button>
+          <button class="week-button" :class="{ 'active': currentDoubleWeek === 2 }" @click="setCurrentWeek(2)">
+            Неделя 2
+          </button>
+        </div>
+
+        <DoubleWeekSchedule 
+          :first-schedule="doubleSchedules.first" 
+          :second-schedule="doubleSchedules.second"
+          :first-title="firstTitle" 
+          :second-title="secondTitle" 
+          :current-week="currentDoubleWeek" 
+        />
       </div>
     </div>
   </div>
@@ -185,6 +188,15 @@ export default {
   background-color: var(--app-secondary-bg-color)
   display: flex
   flex-direction: column
+  height: 100%
+  min-height: 100vh
+
+.double-container
+  flex: 1
+  display: flex
+  flex-direction: column
+  overflow-y: auto
+  -webkit-overflow-scrolling: touch
 
 .double-content
   flex: 1
@@ -193,6 +205,7 @@ export default {
   scroll-behavior: smooth
   display: flex
   flex-direction: column
+  overflow: hidden
 
 .double-search-block
   padding: 1rem
@@ -205,7 +218,7 @@ export default {
   display: flex
   flex-direction: column
   flex: 1
-  min-width: 30rem
+  min-width: 27rem
 
 .search-result
   text-align: center
@@ -258,6 +271,13 @@ export default {
     .tg-theme &
       background-color: $color-light-green
       color: var(--tg-button-text-color)
+
+.loading
+  position: absolute 
+  top: 50%
+  left: 50%
+  transform: translate(-50%, -50%)
+  font-size: 2rem
 
   // Hover только для устройств с курсором мыши
   @media (hover: hover) and (pointer: fine)

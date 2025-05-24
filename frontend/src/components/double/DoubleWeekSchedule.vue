@@ -68,6 +68,7 @@
     </div>
   </div>
 </template>
+
 <script>
 const defaultRows = [
   { time: '08:00<br>09:30', type: 'seminar' },
@@ -128,6 +129,40 @@ export default {
     }
   },
   methods: {
+    syncRowHeights() {
+      this.$nextTick(() => {
+        const days = this.$el.querySelectorAll('.day-section');
+        
+        days.forEach(day => {
+          const tables = day.querySelectorAll('.table-wrapper');
+          if (tables.length !== 2) return;
+          
+          const rows1 = tables[0].querySelectorAll('.table__content-row');
+          const rows2 = tables[1].querySelectorAll('.table__content-row');
+          
+          // Сначала сбросим все высоты
+          rows1.forEach(row => row.style.minHeight = '');
+          rows2.forEach(row => row.style.minHeight = '');
+          
+          // Затем синхронизируем
+          rows1.forEach((row1, index) => {
+            const row2 = rows2[index];
+            if (!row2) return;
+            
+            // Получаем реальные высоты после сброса
+            const height1 = row1.getBoundingClientRect().height;
+            const height2 = row2.getBoundingClientRect().height;
+            
+            // Устанавливаем максимальную высоту
+            const maxHeight = Math.max(height1, height2);
+            if (maxHeight > 0) {
+              row1.style.minHeight = `${maxHeight}px`;
+              row2.style.minHeight = `${maxHeight}px`;
+            }
+          });
+        });
+      });
+    },
     getTimeSlotsForDay(dayIndex) {
       return dayIndex === 5 ? saturdayRows : defaultRows;
     },
@@ -278,11 +313,38 @@ export default {
       }).join('<br>');
     }
   },
+  watch: {
+    firstSchedule: {
+      handler() {
+        this.syncRowHeights()
+      },
+      deep: true
+    },
+    secondSchedule: {
+      handler() {
+        this.syncRowHeights()
+      },
+      deep: true
+    },
+    currentWeek() {
+      this.syncRowHeights()
+    }
+  },
   mounted() {
+    this.syncRowHeights();
     if (this.isTelegram) {
       this.$refs.scrollContainer.style.overscrollBehavior = 'none';
     }
+    
+    window.addEventListener('resize', this.syncRowHeights);
+    // Добавляем обработчик изменения ориентации
+    window.addEventListener('orientationchange', this.syncRowHeights);
   },
+
+  beforeDestroy() {
+    window.removeEventListener('resize', this.syncRowHeights);
+    window.removeEventListener('orientationchange', this.syncRowHeights);
+  }
 }
 </script>
 
@@ -295,134 +357,77 @@ export default {
   flex: 1
   background: var(--app-bg-color)
   color: var(--app-text-color)
-
-  // Стили для темной темы Telegram
-  .tg-theme-dark &
-    scrollbar-color: var(--tg-theme-secondary-bg-color) var(--tg-theme-bg-color)
-  
-  .tg-theme-light &
-    scrollbar-color: var(--tg-theme-secondary-bg-color) var(--tg-theme-bg-color)
+  overflow-x: auto
+  padding-bottom: 1rem
+  scrollbar-width: none
+  &::-webkit-scrollbar
+    display: none
 
 .schedule-container
   width: 100%
   min-height: 100%
   display: flex
   flex-direction: column
-  gap: 1.5rem
+  gap: clamp(1rem, 3vw, 1.5rem)
   background-color: var(--tg-secondary-bg-color)
-  overflow: visible /* Важно! */
+  padding: 0 clamp(0.5rem, 2vw, 1rem)
 
 .day-section
   display: flex
   flex-direction: column
-  gap: 0.75rem
-  overflow: visible /* Важно! */
-
+  gap: clamp(0.5rem, 2vw, 0.75rem)
   &:last-child
-    margin-bottom: calc(2rem + #{$footer-height})
-
-  // Медиазапросы для разных устройств
-  @include respond(small-phone)
-    &:last-child
-      margin-bottom: calc(2rem + #{$footer-height})
-
-  @include respond(phone)
-    &:last-child
-      margin-bottom: calc(2rem + #{$footer-height})
-
-  @include respond(tab-port)
-    margin-bottom: 1.5rem
-    &:last-child
-      margin-bottom: calc(2rem + #{$footer-height})
-
-  @include respond(tab-land)
-    &:last-child
-      margin-bottom: 2rem
+    margin-bottom: $footer-height
 
 .day-title
-  font-size: 1.2rem
+  font-size: clamp(1rem, 4vw, 1.2rem)
   font-weight: 600
   color: var(--app-text-color)
+  margin: 0
+  padding: 0 clamp(0.3rem, 1.5vw, 0.5rem)
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
 
 .double-table-container
   display: flex
+  gap: clamp(0.5rem, 2vw, 1rem)
+  width: 100%
+  align-items: stretch
   overflow-x: auto
-  overflow-y: hidden
-  scrollbar-width: thin
+  scroll-snap-type: x proximity
+  scroll-padding: 1rem
   padding-bottom: 1rem
-  min-width: 100%
-  cursor: grab
-  
-  /* Включаем инерционный скролл и разрешаем перетаскивание */
   -webkit-overflow-scrolling: touch
-  scroll-behavior: smooth
-  
-  &::-webkit-scrollbar
-    height: .6rem
-    display: block
-  
-  &::-webkit-scrollbar-thumb
-    background-color: var(--app-border-color)
-    border-radius: .4rem
-    
-  
-  &::-webkit-scrollbar-track
-    background-color: var(--app-bg-color)
-    border-radius: .4rem
-  
-  /* Улучшенные стили для Telegram */
-  .tg-theme-dark &,
-  .tg-theme-light &
-    scrollbar-color: var(--tg-theme-secondary-bg-color) var(--tg-theme-bg-color)
-    &::-webkit-scrollbar-thumb
-      background-color: var(--tg-theme-secondary-bg-color)
-    &::-webkit-scrollbar-track
-      background-color: var(--tg-theme-bg-color)
-  
-  @include respond(computer)
-    &::-webkit-scrollbar
-      height: .8rem
+  flex-wrap: nowrap
 
-.table-wrapper
-  min-width: 100%  
-  width: 35rem      
-  flex: 0 0 auto  
+  .table-wrapper
+    scroll-snap-align: start
+    min-width: calc(90vw - 2rem)
+    width: calc(90vw - 2rem)
+    display: flex
+    flex-direction: column
+    flex: 0 0 auto
+    transition: min-width 0.3s ease, width 0.3s ease
 
 .table
-  min-width: 100%  
-  width: 30rem      
-  flex: 0 0 auto
+  width: 100%
+  flex: 1
   background-color: var(--app-secondary-bg)
   overflow: hidden
   display: flex
   flex-direction: column
-  transition: transform 0.2s ease
-  border: .1rem solid var(--app-border-color)
-
-  tr
-    min-height: 5rem
-    height: auto !important
-    margin-top: -0.1rem
-
-  th,
-  td
-    font-size: 1rem
-    font-weight: 400
-    box-sizing: border-box
-    overflow-wrap: break-word
-    
-    @include respond(small-phone)
-      font-size: 0.8rem
+  border: clamp(0.05rem, 0.3vw, 0.1rem) solid var(--app-border-color)
+  border-radius: clamp(0.3rem, 1vw, 0.5rem)
 
   &__title
-    font-size: 1.15rem
+    font-size: clamp(0.9rem, 3.5vw, 1.15rem)
     font-weight: 600
-    padding: 0.9rem
+    padding: clamp(0.4rem, 1.8vw, 0.9rem)
     background-color: var(--app-primary-color)
     color: $color-white
     text-align: center
     margin: 0
-    letter-spacing: 0.05rem
     white-space: nowrap
     overflow: hidden
     text-overflow: ellipsis
@@ -431,38 +436,35 @@ export default {
     width: 100%
     display: flex
     flex-direction: column
-    &:active
-      cursor: grabbing
+    flex: 1
 
     &-row
-      position: relative
       display: flex
       width: 100%
-      justify-content: space-between
-      align-items: flex-start
-      min-height: 5rem
+      min-height: clamp(3rem, 10vw, 5rem)
       background-color: var(--app-bg-color)
-      transition: all 0.2s ease
-      box-shadow: 0 .1rem .3rem rgba(0, 0, 0, 0.05)
-      border: solid 0.1rem var(--app-border-color)
-      border-collapse: collapse
+      border-bottom: clamp(0.05rem, 0.3vw, 0.1rem) solid var(--app-border-color)
+      box-sizing: border-box
+      
+      &:last-child
+        border-bottom: none
 
       &-time
-        align-self: center
-        padding: 0.5rem
-        flex: 0 0 15%
-        font-size: 0.95rem
+        flex: 0 0 clamp(12%, 15vw, 15%)
+        padding: clamp(0.2rem, 1vw, 0.5rem)
+        font-size: clamp(0.7rem, 3vw, 0.95rem)
         color: var(--app-text-color)
         font-weight: 500
         line-height: 1.3
         text-align: center
+        display: flex
+        align-items: center
+        justify-content: center
+        word-break: break-word
 
       &-color
-        width: 0.7rem
-        min-height: 100%
-        margin: 0 0.5rem
+        width: clamp(0.4rem, 1.5vw, 0.7rem)
         flex-shrink: 0
-        align-self: stretch
         background-color: var(--app-border-color)
         &--seminar
           background-color: var(--app-border-color)
@@ -471,55 +473,74 @@ export default {
 
       &-lesson
         flex: 1
-        padding: 0.5rem 0.8rem
+        padding: clamp(0.3rem, 1vw, 0.5rem) clamp(0.3rem, 1.3vw, 0.8rem)
         display: flex
         flex-direction: column
         justify-content: center
         min-height: 100%
         &--class
-          display: block
           color: var(--app-text-color)
-          font-size: 1rem
-          margin-bottom: 0.3rem
+          font-size: clamp(0.75rem, 2.8vw, 1rem)
+          margin-bottom: clamp(0.1rem, 0.4vw, 0.3rem)
           line-height: 1.3
+          word-break: break-word
         &--details
           color: $color-light-green
-          font-size: 0.9rem
+          font-size: clamp(0.65rem, 2.3vw, 0.9rem)
           line-height: 1.4
-          &:not(:last-child)
-            margin-bottom: 0.2rem
+          word-break: break-word
 
       &-room
-        flex: 0 0 15%
-        text-align: right
+        flex: 0 0 auto
+        min-width: 15%
+        padding: 0.5rem 0.5rem 0 0
         color: var(--app-text-color)
-        font-size: 0.95rem
-        padding: 0.5rem .5rem 0 0
+        font-size: clamp(0.7rem, 3vw, 0.95rem)
+        display: flex
+        align-items: center
+        justify-content: flex-end
         white-space: nowrap
+        width: max-content
 
+// Мелкие телефоны (до 321px)
+@include respond(small-phone)
+  .double-table-container
+    .table-wrapper
+      min-width: 84vw
+      width: 84vw
 
-@media (orientation: landscape) and (max-width: 1025px)
-  .double-week-schedule
-    height: 100vh
-  
-  .double-table-conteiner
-    width: 100vw
-    gap: 1rem
-    
-    &::-webkit-scrollbar
-      display: none
-    
-    scrollbar-width: none
+// Телефоны (321px - 481px)
+@include respond(phone)
+  .double-table-container
+    .table-wrapper
+      min-width: 86vw
+      width: 86vw
 
-  .table-wrapper
-    min-width: calc(50vw - 2.5rem) // 50% ширины минус отступы и промежуток
-    width: calc(50vw - 2.5rem)
-    flex: 0 0 auto
+// Планшеты в портретной ориентации (481px - 769px)
+@include respond(tab-port)
+  .double-table-container
+    .table-wrapper
+      min-width: 62.5vw
+      width: 62.5vw
 
-  .table 
-    min-width: 100%
-    width: 100%
-    &__title
-      font-size: 1rem
-      padding: 0.7rem
+// Планшеты в ландшафтной ориентации (769px - 1025px)
+@include respond(tab-lend)
+  .double-table-container
+    .table-wrapper
+      min-width: calc(45vw - 2.3rem)
+      width: calc(45vw - 2.3rem)
+
+// Компьютеры (1025px - 1281px)
+@include respond(computer)
+  .double-table-container
+    .table-wrapper
+      min-width: 35vw
+      width: 35vw
+
+// Большие экраны (от 1281px)
+@include respond(big-screen)
+  .double-table-container
+    .table-wrapper
+      min-width: 34vw
+      width: 34vw
 </style>
