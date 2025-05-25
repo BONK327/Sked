@@ -1,12 +1,12 @@
 const axios = require("axios");
 require("dotenv").config();
 
-const GroupService = require('../services/groups.js')
+const GroupRepository = require('../repositories/groupRepository.js')
 
 const username = process.env.API_LOGIN;
 const password = process.env.API_PASSWORD;
 const token = process.env.API_TOKEN;
-const groupService = new GroupService();
+const groupRepository = new GroupRepository();
 
 async function updateGroups() {
     try {
@@ -17,8 +17,8 @@ async function updateGroups() {
             }
         })).data.groups;
         
-        await groupService.deleteAll();
-        await groupService.createMultiple(groups);
+        await groupRepository.deleteAll();
+        await groupRepository.bulkCreate(groups);
     } catch (error) {
         console.error('Error:', error.message);
     }

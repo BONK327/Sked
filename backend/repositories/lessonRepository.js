@@ -1,4 +1,4 @@
-const { col, fn } = require('sequelize');
+const { col, fn, Op } = require('sequelize');
 const LessonModel = require('../models/lessonModel');
 const TeacherModel = require('../models/teacherModel');
 const GroupModel = require('../models/groupModel');
@@ -95,6 +95,20 @@ class LessonRepository {
         return await this.model.destroy({
             where: {},
             truncate: false
+        });
+    }
+
+    async deleteByIds(ids) {
+        if (!ids || ids.length === 0) {
+            return
+        }
+        
+        return await this.model.destroy({
+            where: {
+                id: {
+                    [Op.in]: ids
+                }
+            }
         });
     }
 }

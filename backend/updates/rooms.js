@@ -1,12 +1,12 @@
 const axios = require("axios");
 require("dotenv").config();
 
-const RoomService = require('../services/rooms.js')
+const RoomRepository = require('../repositories/roomRepository.js')
 
 const username = process.env.API_LOGIN;
 const password = process.env.API_PASSWORD;
 const token = process.env.API_TOKEN;
-const roomService = new RoomService();
+const roomRepository = new RoomRepository();
 
 async function updateRooms() {
     try {
@@ -17,8 +17,8 @@ async function updateRooms() {
             }
         })).data.rooms;
         
-        await roomService.deleteAll();
-        await roomService.createMultiple(rooms);
+        await roomRepository.deleteAll();
+        await roomRepository.bulkCreate(rooms);
     } catch (error) {
         console.error('Error:', error.message);
     }

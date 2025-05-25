@@ -40,7 +40,8 @@ class UserRepository {
             const users = await UserModel.findAll({
                 attributes: [
                     'id',
-                    'firstname'
+                    'firstname',
+                    'notifications'
                 ],
                 where: {
                     [Op.or]: [

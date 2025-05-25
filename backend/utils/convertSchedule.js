@@ -40,6 +40,7 @@ class ConverterSchedule {
     }
 
     convertDBToPresentGroup(scheduleDB) {
+        if (scheduleDB.length === 0) return { type: "group", name: "", lessons: [] }
         return {
             type: "group",
             name: scheduleDB[0].group_name,
@@ -69,6 +70,7 @@ class ConverterSchedule {
     }
 
     convertDBToPresentTeacher(scheduleDB) {
+        if (scheduleDB.length === 0) return { type: "teacher", name: "", lessons: [] }
         return {
             type: "teacher",
             name: scheduleDB[0].teacher_fullname,
@@ -101,6 +103,7 @@ class ConverterSchedule {
             prevLesson && currLesson &&
             prevLesson.teacher_id == currLesson.teacher_id
         ;
+        if (scheduleDB.length === 0) return { type: "room", name: "", lessons: [] }
         return {
             type: "room",
             name: scheduleDB[0].room_name,

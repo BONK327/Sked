@@ -2,10 +2,10 @@ from telebot import TeleBot
 from telebot.types import Message
 
 
-from tgbot.keyboards import main_menu_keyboard, choice_type_keyboard, cancel_keyboard
-from tgbot.filters import *
-from tgbot.states import states
-from tgbot.queries import *
+from keyboards import main_menu_keyboard, choice_type_keyboard, cancel_keyboard
+from filters import *
+from states import states
+from queries import *
 
 
 
@@ -77,7 +77,7 @@ def register_handlers(bot: TeleBot):
             bot.send_message(user_id, "Такой группы не существует",
                              reply_markup=cancel_keyboard())
         else:
-            bot.send_message(user_id, "Расписание успешно изменилось",
+            bot.send_message(user_id, "Выбор расписания успешно изменился",
                              reply_markup=cancel_keyboard())
             bot.delete_state(user_id, user_id)
 
@@ -91,6 +91,6 @@ def register_handlers(bot: TeleBot):
             bot.send_message(user_id, "Такого преподавателя не существует",
                              reply_markup=cancel_keyboard())
         else:
-            bot.send_message(user_id, "Расписание успешно изменилось",
+            bot.send_message(user_id, "Выбор расписания успешно изменился",
                              reply_markup=cancel_keyboard())
             bot.delete_state(user_id, user_id)

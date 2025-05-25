@@ -6,9 +6,7 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "update_groups": "node updates/groups.js",
-    "update_teachers": "node updates/teachers.js",
-    "update_rooms": "node updates/rooms.js"
+    "update": "node updates/main.js"
   },
   "keywords": [],
   "author": "",
