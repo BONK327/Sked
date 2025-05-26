@@ -11,10 +11,6 @@ class LessonService {
         await this.lessonRepository.bulkCreate(schedule);
     }
 
-    async updateLessons(schedule) {
-
-    }
-
     async deleteLessons() {
         this.lessonRepository.deleteAll();
     }

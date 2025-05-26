@@ -73,6 +73,17 @@ class UserService {
         const schedule = await this._getSchedule(type, id);
         const data = await this._getData();
         const notes = await this.noteService.findAllNoteByUser(userData.id);
+
+        if (!schedule.name) {
+            if (type == "group") {
+                const group = await this.groupRepository.findById(id)
+                schedule.name = group.name
+            } else {
+                const teacher = await this.teacherRepository.findById(id)
+                schedule.name = teacher.shortname
+            }
+        }
+
         return {
             schedule: schedule,
             data: data,
@@ -137,7 +148,6 @@ class UserService {
         if (type == "group") {
             const schedule = await this.lessonRepository.findByGroup(id);
             const result = this.converterSchedule.convertDBToPresentGroup(schedule);
-            console.log(type)
             return result;
         } else if (type == "teacher") {
             const schedule = await this.lessonRepository.findByTeacher(id);
