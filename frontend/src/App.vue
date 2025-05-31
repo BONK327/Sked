@@ -35,7 +35,7 @@ export default {
     Notes,
     AddNoteModal,
     NoteDialog,
-    Preloader, 
+    Preloader,
     Double
   },
   data() {
@@ -48,7 +48,7 @@ export default {
   },
   computed: {
     ...mapGetters(['activeTab']),
-     currentComponent() {
+    currentComponent() {
       const components = {
         'schedule': 'sked',
         'notes': 'Notes',
@@ -62,17 +62,17 @@ export default {
       this.isTelegram = true;
       this.initTelegramTheme();
       this.setupTelegramBackButton();
-      
+
+      // Отключаем свайпы вверх-вниз для закрытия
+      window.Telegram.WebApp.disableVerticalSwipes();
+
       // Отключаем все подтверждения закрытия
       window.Telegram.WebApp.disableClosingConfirmation();
-      
+
       // Отключаем кнопку подтверждения изменений
       window.Telegram.WebApp.MainButton.hide();
       window.Telegram.WebApp.MainButton.offClick();
-      
-      // Блокируем появление кнопки "Continue" при прокрутке
-      window.Telegram.WebApp.enableClosingConfirmation();
-      
+
       // Развернем приложение на весь экран
       window.Telegram.WebApp.expand();
     }
@@ -117,14 +117,14 @@ export default {
   methods: {
     disableTelegramBehaviors() {
       if (!this.isTelegram) return;
-      
+
       const tg = window.Telegram.WebApp;
       tg.MainButton.hide();
       tg.MainButton.offClick();
       tg.disableClosingConfirmation();
       tg.BackButton.hide();
       tg.setBackgroundColor(this.isDarkTheme ? '#18222d' : '#ffffff');
-      
+
       // Блокируем стандартное поведение
       document.body.style.overscrollBehavior = 'none';
     },
@@ -149,32 +149,35 @@ export default {
     setupTelegramBackButton() {
       const WebApp = window.Telegram.WebApp;
       WebApp.BackButton.hide(); // Сначала скрываем
-      
+
       // Показываем только когда нужно
       // WebApp.BackButton.show();
       WebApp.BackButton.onClick(() => {
         WebApp.close();
       });
-      
+
       // Явно отключаем подтверждение
       WebApp.disableClosingConfirmation();
     }
-  }, 
+  },
   mounted() {
     if (this.isTelegram) {
       const tg = window.Telegram.WebApp;
-      
+
+      // Гарантированно отключаем свайпы
+      tg.disableVerticalSwipes();
+
       // Гарантированно скрываем MainButton
       tg.MainButton.hide();
       tg.MainButton.offClick();
-      
+
       // Отключаем подтверждение закрытия
       tg.disableClosingConfirmation();
-      
+
       // Настраиваем BackButton (если нужно)
       tg.BackButton.hide();
-      
-      // Устанавливаем цвет фона, чтобы избежать "проседаний"
+
+      // Устанавливаем цвет фона
       tg.setBackgroundColor(this.isDarkTheme ? '#18222d' : '#ffffff');
     }
   }
