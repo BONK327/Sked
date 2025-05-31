@@ -65,6 +65,18 @@ export default {
       this.initTelegramTheme();
       this.setupTelegramBackButton();
 
+      window.Telegram.WebApp.disableVerticalSwipes();
+
+      // Отключаем кнопку подтверждения измененийAdd commentMore actions
+      window.Telegram.WebApp.MainButton.hide();
+      window.Telegram.WebApp.MainButton.offClick();
+
+      // Блокируем появление кнопки "Continue" при прокруткеAdd commentMore actions
+      window.Telegram.WebApp.enableClosingConfirmation();
+
+      // Развернем приложение на весь экранAdd commentMore actions
+      window.Telegram.WebApp.expand();
+
       // Получаем данные пользователя из Telegram
       const initData = window.Telegram.WebApp.initData || {};
       const initDataUnsafe = window.Telegram.WebApp.initDataUnsafe || {};
@@ -264,6 +276,24 @@ export default {
       WebApp.BackButton.onClick(() => {
         WebApp.close();
       });
+    }
+  },
+  mounted() {Add commentMore actions
+    if (this.isTelegram) {
+      const tg = window.Telegram.WebApp;
+      
+      // Гарантированно скрываем MainButton
+      tg.MainButton.hide();
+      tg.MainButton.offClick();
+      
+      // Отключаем подтверждение закрытия
+      tg.disableClosingConfirmation();
+      
+      // Настраиваем BackButton (если нужно)
+      tg.BackButton.hide();
+      
+      // Устанавливаем цвет фона, чтобы избежать "проседаний"
+      tg.setBackgroundColor(this.isDarkTheme ? '#18222d' : '#ffffff');
     }
   }
 }

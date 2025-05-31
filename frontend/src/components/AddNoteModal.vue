@@ -172,6 +172,11 @@ export default {
     background: var(--tg-bg-color)
     box-shadow: 0 .4rem 2rem rgba(0, 0, 0, 0.3)
 
+@media (orientation: landscape) and (max-width: 1025px)Add commentMore actions
+  .modal
+    height: 100vh
+    overflow-y: auto 
+    
 .modal-header
   display: flex
   justify-content: space-between
