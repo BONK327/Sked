@@ -4,7 +4,7 @@ import requests
 
 load_dotenv()
 
-BASE_URL = f"http://{os.getenv('IP_ADDRESS')}:{os.getenv('SERVER_PORT')}"
+BASE_URL = f"http://{os.getenv('IP_ADDRESS')}:{os.getenv('PORT')}"
 
 
 def post_user_data(user_id, user_firstname, user_username):
@@ -13,9 +13,10 @@ def post_user_data(user_id, user_firstname, user_username):
         "firstname": user_firstname,
         "username": user_username
     }
-    
+
     try:
         response = requests.post(f"{BASE_URL}/api/users/tgbot", json=payload)
+        print(response.json())
         return response.json()['user']
     except requests.exceptions.RequestException as e:
         print("Ошибка запроса:", e)

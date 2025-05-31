@@ -9,13 +9,8 @@
       </div>
     </transition>
     <div v-if="showSuggestions && suggestions.length > 0" class="suggestions">
-      <div 
-        v-for="(item, index) in suggestions" 
-        :key="item" 
-        class="suggestion-item"
-        :class="{ 'suggestion-active': index === activeSuggestionIndex }"
-        @click="selectSuggestion(item)"
-      >
+      <div v-for="(item, index) in suggestions" :key="item" class="suggestion-item"
+        :class="{ 'suggestion-active': index === activeSuggestionIndex }" @click="selectSuggestion(item)">
         {{ item }}
       </div>
     </div>
@@ -38,7 +33,7 @@ export default {
   name: 'Search',
   props: {
     placeholder: {
-      type: String, 
+      type: String,
       default: 'Группа, преподаватель, аудитория'
     }
   },
@@ -145,7 +140,7 @@ export default {
       }, 200);
     },
 
-     // Обработка нажатия Enter в поле ввода
+    // Обработка нажатия Enter в поле ввода
     handleEnter() {
       if (this.activeSuggestionIndex >= 0 && this.suggestions.length) {
         this.selectSuggestion(this.suggestions[this.activeSuggestionIndex]);
@@ -499,10 +494,10 @@ export default {
       this.searchInput = item;
       this.showSuggestions = false;
       this.activeSuggestionIndex = -1;
-      
+
       // Убираем вызов handleSearch() здесь
       // Теперь поиск будет выполняться только при явном действии пользователя (нажатие Enter или кнопки поиска)
-      
+
       // Фокусируемся обратно на поле ввода
       this.$nextTick(() => {
         if (this.$refs.searchInput) {

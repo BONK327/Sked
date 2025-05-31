@@ -27,6 +27,7 @@ class GroupService {
             }
             const scheduleDB = await this.lessonRepository.findByGroup(group.id);
             const schedulePresent = this.converterSchedule.convertDBToPresentGroup(scheduleDB);
+            schedulePresent.name = group.name
             return schedulePresent;
         } catch (error) {
             if (error.name == "NotFoundError") {

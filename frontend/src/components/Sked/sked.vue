@@ -1,5 +1,4 @@
 <template>
-  <Header title=""></Header>
   <Slider/>
   <GroupInfo/>
   <Search 

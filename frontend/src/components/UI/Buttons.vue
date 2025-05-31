@@ -97,7 +97,7 @@ export default {
         stroke: $color-light-green
 
   &__sked
-    min-width: 45%
+    min-width: max-content
 
   &__full-sked
     width: 1.5rem

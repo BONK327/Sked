@@ -18,13 +18,13 @@
 </template>
 
 <script>
-import { mapGetters } from 'vuex'
+import { mapGetters, mapActions } from 'vuex'
 import sked from "@/components/Sked/sked.vue"
 import Notes from "@/views/Notes.vue"
 import Footer from "@/components/Footer.vue"
 import AddNoteModal from "@/components/AddNoteModal.vue"
 import NoteDialog from "@/components/NoteDialog.vue"
-import Preloader from "@/components/Preloader.vue" // Импортируем Preloader
+import Preloader from "@/components/Preloader.vue"
 import Double from './components/double/Double.vue'
 
 export default {
@@ -40,10 +40,11 @@ export default {
   },
   data() {
     return {
-      isLoading: true, // Флаг загрузки
+      isLoading: true,
       isTelegram: false,
       isDarkTheme: false,
-      tgThemeParams: {}
+      tgThemeParams: {},
+      userData: null
     }
   },
   computed: {
@@ -58,76 +59,185 @@ export default {
     }
   },
   async created() {
-    if (window.Telegram && window.Telegram.WebApp) {
-      this.isTelegram = true;
-      this.initTelegramTheme();
-      this.setupTelegramBackButton();
-
-      // Отключаем свайпы вверх-вниз для закрытия
-      window.Telegram.WebApp.disableVerticalSwipes();
-
-      // Отключаем все подтверждения закрытия
-      window.Telegram.WebApp.disableClosingConfirmation();
-
-      // Отключаем кнопку подтверждения изменений
-      window.Telegram.WebApp.MainButton.hide();
-      window.Telegram.WebApp.MainButton.offClick();
-
-      // Развернем приложение на весь экран
-      window.Telegram.WebApp.expand();
-    }
     // Проверяем, открыто ли приложение в Telegram
     if (window.Telegram && window.Telegram.WebApp) {
       this.isTelegram = true;
       this.initTelegramTheme();
       this.setupTelegramBackButton();
+
+      // Получаем данные пользователя из Telegram
+      const initData = window.Telegram.WebApp.initData || {};
+      const initDataUnsafe = window.Telegram.WebApp.initDataUnsafe || {};
+      this.userData = {
+        id: initDataUnsafe.user?.id || 123231,
+        firstname: initDataUnsafe.user?.first_name || 'Test',
+        username: initDataUnsafe.user?.username || 'testuser'
+      };
+
+      //console.log('Telegram user data:', this.userData);
+
+      // Отключаем все подтверждения закрытия
+      window.Telegram.WebApp.disableClosingConfirmation();
+
+      // Развернем приложение на весь экран
       window.Telegram.WebApp.expand();
+    } else {
+      // Для локальной разработки без Telegram
+      this.userData = {
+        id: 123231,
+        firstname: 'Test',
+        username: 'testuser'
+      };
     }
 
-    // Фиксированная задержка 2 секунды
-    const fixedDelay = new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      // Загружаем данные пользователя
+      await this.$store.dispatch('fetchUserData', this.userData);
 
-    // Ваши текущие асинхронные операции
-    const dataLoading = (async () => {
-      const today = new Date();
-      const dayNames = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
-      const monthNames = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+      // Загружаем расписание пользователя
+      const userSchedule = this.$store.state.userSchedule;
+      if (userSchedule) {
+        await this.loadUserSchedule(userSchedule);
+      }
 
+      // Загружаем остальные данные
       await Promise.all([
         this.$store.dispatch('initWeekNumber'),
-        this.$store.dispatch('fetchAllDataLists').catch(() => {
-          console.log('Не удалось загрузить списки, но приложение продолжит работу');
-        }),
-        this.$store.dispatch('fetchFullWeekSchedule', {
-          fullDayName: dayNames[today.getDay()],
-          date: today.getDate(),
-          month: monthNames[today.getMonth()],
-          originalDate: today
-        })
+        this.$store.dispatch('fetchAllDataLists')
       ]);
-    })();
 
-    // Ждем либо завершения загрузки данных, либо истечения 2 секунд
-    await Promise.all([fixedDelay, dataLoading]).catch(error => {
-      console.error('Ошибка загрузки:', error);
-    });
-
-    this.isLoading = false;
+    } catch (error) {
+      console.error('Ошибка загрузки данных:', error);
+    } finally {
+      this.isLoading = false;
+    }
   },
   methods: {
-    disableTelegramBehaviors() {
-      if (!this.isTelegram) return;
+    async loadUserSchedule(schedule) {
+      try {
+        //console.log('Received user schedule from API:', schedule);
 
-      const tg = window.Telegram.WebApp;
-      tg.MainButton.hide();
-      tg.MainButton.offClick();
-      tg.disableClosingConfirmation();
-      tg.BackButton.hide();
-      tg.setBackgroundColor(this.isDarkTheme ? '#18222d' : '#ffffff');
+        if (!schedule) {
+          //console.log('No user schedule found');
+          this.$store.commit('SET_CURRENT_GROUP', '');
+          this.$store.commit('SET_CURRENT_TEACHER', '');
+          this.$store.commit('SET_CURRENT_ROOM', '');
+          return;
+        }
 
-      // Блокируем стандартное поведение
-      document.body.style.overscrollBehavior = 'none';
+        let type, query, displayQuery;
+
+        switch (schedule.type) {
+          case 'group':
+            type = 'group';
+            query = schedule.name;
+            displayQuery = schedule.name;
+            //console.log('Setting group:', { query, displayQuery });
+            this.$store.commit('SET_CURRENT_GROUP', query);
+            this.$store.commit('SET_SEARCH_TYPE', 'group');
+            break;
+
+          case 'teacher':
+            type = 'teacher';
+            const nameParts = schedule.name.split(' ');
+            const lastName = nameParts[0];
+            const firstNameInitial = nameParts[1]?.[0]?.toUpperCase() || '';
+            const middleNameInitial = nameParts[2]?.[0]?.toUpperCase() || '';
+
+            query = `${lastName}_${firstNameInitial}_${middleNameInitial}`;
+            displayQuery = `${lastName} ${firstNameInitial}.${middleNameInitial ? ' ' + middleNameInitial + '.' : ''}`.trim();
+
+            // console.log('Setting teacher:', {
+            //   original: schedule.name,
+            //   query,
+            //   displayQuery
+            // });
+
+            this.$store.commit('SET_CURRENT_TEACHER', displayQuery);
+            this.$store.commit('SET_TEACHER_API_QUERY', query);
+            this.$store.commit('SET_SEARCH_TYPE', 'teacher');
+            break;
+
+          case 'room':
+            type = 'room';
+            query = schedule.name;
+            displayQuery = schedule.name;
+            //console.log('Setting room:', { query, displayQuery });
+            this.$store.commit('SET_CURRENT_ROOM', query);
+            this.$store.commit('SET_SEARCH_TYPE', 'room');
+            break;
+        }
+
+        await this.$store.dispatch('searchSchedule', {
+          type,
+          query,
+          displayQuery
+        });
+
+      } catch (error) {
+        console.error('Error loading user schedule:', error);
+      }
     },
+    // async loadUserSchedule(schedule) {
+    //   try {
+    //     if (!schedule) {
+    //       // Если нет расписания пользователя, просто устанавливаем пустое состояние
+    //       this.$store.commit('SET_CURRENT_GROUP', '');
+    //       this.$store.commit('SET_CURRENT_TEACHER', '');
+    //       this.$store.commit('SET_CURRENT_ROOM', '');
+    //       return;
+    //     }
+
+    //     // Определяем тип расписания и запрос
+    //     let type, query, displayQuery;
+    //     switch (schedule.type) {
+    //       case 'group':
+    //         type = 'group';
+    //         query = schedule.name;
+    //         displayQuery = schedule.name;
+    //         this.$store.commit('SET_CURRENT_GROUP', query);
+    //         break;
+    //       case 'teacher':
+    //         type = 'teacher';
+    //         // Преобразуем полное имя в формат API (Иванов_И_И)
+    //         const nameParts = schedule.name.split(' ');
+    //         query = `${nameParts[0]}_${nameParts[1]?.[0] || ''}_${nameParts[2]?.[0] || ''}`;
+    //         displayQuery = schedule.name;
+    //         this.$store.commit('SET_CURRENT_TEACHER', { query, displayQuery });
+    //         break;
+    //       case 'room':
+    //         type = 'room';
+    //         query = schedule.name;
+    //         displayQuery = schedule.name;
+    //         this.$store.commit('SET_CURRENT_ROOM', query);
+    //         break;
+    //     }
+
+    //     // Всегда отправляем запрос, даже если расписание пустое
+    //     await this.$store.dispatch('searchSchedule', {
+    //       type,
+    //       query,
+    //       displayQuery
+    //     });
+
+    //   } catch (error) {
+    //     console.error('Ошибка загрузки расписания пользователя:', error);
+    //     // Даже если ошибка, сохраняем название группы/преподавателя
+    //     if (schedule) {
+    //       if (schedule.type === 'group') {
+    //         this.$store.commit('SET_CURRENT_GROUP', schedule.name);
+    //       } else if (schedule.type === 'teacher') {
+    //         this.$store.commit('SET_CURRENT_TEACHER', {
+    //           query: schedule.name.replace(/ /g, '_'),
+    //           displayQuery: schedule.name
+    //         });
+    //       } else if (schedule.type === 'room') {
+    //         this.$store.commit('SET_CURRENT_ROOM', schedule.name);
+    //       }
+    //     }
+    //   }
+    // },
+
     initTelegramTheme() {
       const WebApp = window.Telegram.WebApp;
       this.tgThemeParams = WebApp.themeParams || {};
@@ -135,6 +245,7 @@ export default {
       this.applyTelegramTheme();
       WebApp.onEvent('themeChanged', this.applyTelegramTheme);
     },
+
     applyTelegramTheme() {
       const WebApp = window.Telegram.WebApp;
       this.isDarkTheme = WebApp.colorScheme === 'dark';
@@ -146,39 +257,13 @@ export default {
       document.documentElement.style.setProperty('--tg-link-color', this.tgThemeParams.link_color || '#168acd');
       document.documentElement.style.setProperty('--tg-secondary-bg-color', this.tgThemeParams.secondary_bg_color || (this.isDarkTheme ? '#212529' : '#f4f4f5'));
     },
+
     setupTelegramBackButton() {
       const WebApp = window.Telegram.WebApp;
-      WebApp.BackButton.hide(); // Сначала скрываем
-
-      // Показываем только когда нужно
-      // WebApp.BackButton.show();
+      WebApp.BackButton.hide();
       WebApp.BackButton.onClick(() => {
         WebApp.close();
       });
-
-      // Явно отключаем подтверждение
-      WebApp.disableClosingConfirmation();
-    }
-  },
-  mounted() {
-    if (this.isTelegram) {
-      const tg = window.Telegram.WebApp;
-
-      // Гарантированно отключаем свайпы
-      tg.disableVerticalSwipes();
-
-      // Гарантированно скрываем MainButton
-      tg.MainButton.hide();
-      tg.MainButton.offClick();
-
-      // Отключаем подтверждение закрытия
-      tg.disableClosingConfirmation();
-
-      // Настраиваем BackButton (если нужно)
-      tg.BackButton.hide();
-
-      // Устанавливаем цвет фона
-      tg.setBackgroundColor(this.isDarkTheme ? '#18222d' : '#ffffff');
     }
   }
 }

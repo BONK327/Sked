@@ -17,9 +17,12 @@ class UserRepository {
 
     async createOne(userData) {
         try {
+	    console.log(3);
             const user = await UserModel.create(userData);
+	    console.log(user);
             return user;
         } catch (error) {
+	    console.log(error)
             throw error;
         }
     }
@@ -40,7 +43,8 @@ class UserRepository {
             const users = await UserModel.findAll({
                 attributes: [
                     'id',
-                    'firstname'
+                    'firstname',
+                    'notifications'
                 ],
                 where: {
                     [Op.or]: [

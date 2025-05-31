@@ -208,7 +208,7 @@ export default {
   overflow: hidden
 
 .double-search-block
-  padding: 1rem
+  padding: 0 1rem 1rem 1rem
   background-color: var(--app-secondary-bg-color)
   display: flex
   gap: 1rem

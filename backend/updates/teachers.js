@@ -32,7 +32,13 @@ async function updateTeachers() {
             }
             newTeachers.push(newTeacher);
         })
-
+        newTeachers.push({
+            id: 0,
+            lastname: "",
+            firstname: "",
+            middlename: "",
+            shortname: ""
+        })
         
         await teacherRepository.deleteAll();
         await teacherRepository.bulkCreate(newTeachers);

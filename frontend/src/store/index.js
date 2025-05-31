@@ -1,7 +1,7 @@
 import { createStore } from 'vuex'
 import { convertNumberToTime, convertToDate, getNumberFromTime } from '../components/utils/notes';
 import { reactive } from 'vue';
-const localhost = "https://0n3jzfgz-3000.inc1.devtunnels.ms";
+const localhost = "";
 // const localhost = "http://localhost:3000";
 // В хранилище добавляем:
 function getAcademicWeekNumber(date = new Date()) {
@@ -69,7 +69,14 @@ export default createStore({
         allTeachers: [],
         allRooms: [],
         userNotes: [],
-        userId: 123231, // Временный ID, позже заменим на Telegram ID
+
+
+
+        userId: null, // Убираем временный ID
+        userData: null, // Добавляем объект для хранения данных пользователя
+
+
+
         serverNotes: [],// Заметки из БД
 
         doubleSchedules: {
@@ -268,6 +275,20 @@ export default createStore({
                 state.doubleSchedules[key].type = type;
             }
         },
+        SET_USER_DATA(state, payload) {
+            state.userData = payload;
+            state.userId = payload?.id || null;
+        },
+        SET_USER_SCHEDULE(state, schedule) {
+            state.userSchedule = schedule;
+        },
+        SET_SEARCH_TYPE(state, type) {
+            state.searchType = type;
+        },
+        SET_TEACHER_API_QUERY(state, query) {
+            state.teacherApiQuery = query;
+        },
+
 
 
 
@@ -411,7 +432,7 @@ export default createStore({
 
 
 
-        async searchSchedule({ commit, dispatch }, { type, query, isDouble = false, scheduleKey = null }) {
+        async searchSchedule({ commit, dispatch }, { type, query, isDouble = false, scheduleKey = null, displayQuery = null }) {
             try {
                 commit('SET_LOADING', true);
                 if (!isDouble) {
@@ -419,18 +440,20 @@ export default createStore({
                     commit('CLEAR_SEARCH');
                 }
 
+                // Устанавливаем текущий тип поиска и значение
                 switch (type) {
                     case 'group':
-                        if (!isDouble) commit('SET_CURRENT_GROUP', query);
+                        if (!isDouble) commit('SET_CURRENT_GROUP', displayQuery || query);
                         break;
                     case 'teacher':
-                        if (!isDouble) commit('SET_CURRENT_TEACHER', query);
+                        if (!isDouble) commit('SET_CURRENT_TEACHER', displayQuery ? { query, displayQuery } : query);
                         break;
                     case 'room':
-                        if (!isDouble) commit('SET_CURRENT_ROOM', query);
+                        if (!isDouble) commit('SET_CURRENT_ROOM', displayQuery || query);
                         break;
                 }
 
+                // Всегда отправляем запрос, даже если нет данных
                 const response = await fetch(`${localhost}/api/${type}s/${encodeURIComponent(query)}`);
                 if (!response.ok) throw new Error('Ошибка загрузки расписания');
                 const scheduleData = await response.json();
@@ -443,6 +466,20 @@ export default createStore({
             } catch (error) {
                 commit('SET_ERROR', error.message);
                 console.error('Ошибка поиска:', error);
+                // Даже при ошибке сохраняем название группы/преподавателя
+                if (!isDouble) {
+                    switch (type) {
+                        case 'group':
+                            commit('SET_CURRENT_GROUP', displayQuery || query);
+                            break;
+                        case 'teacher':
+                            commit('SET_CURRENT_TEACHER', displayQuery ? { query, displayQuery } : query);
+                            break;
+                        case 'room':
+                            commit('SET_CURRENT_ROOM', displayQuery || query);
+                            break;
+                    }
+                }
                 throw error;
             } finally {
                 commit('SET_LOADING', false);
@@ -554,8 +591,12 @@ export default createStore({
             try {
                 commit('SET_LOADING', true);
 
+                // Устанавливаем базовую неделю только если она еще не установлена
                 if (!state.baseWeekNumber) {
-                    commit('CLEAR_SCHEDULE');
+                    const calculatedWeek = getAcademicWeekNumber();
+                    commit('SET_BASE_WEEK_NUMBER', calculatedWeek);
+                    commit('SET_CURRENT_WEEK_NUMBER', calculatedWeek);
+                    commit('SET_CURRENT_WEEK_TYPE', `week${calculatedWeek}`);
                 }
 
                 let endpoint, query;
@@ -569,7 +610,7 @@ export default createStore({
                     case 'teacher':
                         if (!state.currentTeacher) return;
                         endpoint = 'teachers';
-                        query = encodeURIComponent(state.currentTeacher);
+                        query = encodeURIComponent(state.currentTeacher.replace(/ /g, '_'));
                         break;
                     case 'room':
                         if (!state.currentRoom) return;
@@ -580,30 +621,18 @@ export default createStore({
                         return;
                 }
 
+                //console.log('Fetching schedule for:', { endpoint, query, type: state.searchType });
+
                 const response = await fetch(`${localhost}/api/${endpoint}/${query}`);
                 if (!response.ok) throw new Error('Ошибка загрузки расписания');
 
                 const scheduleData = await response.json();
-                //console.log('Получены данные расписания:', scheduleData);
+                //console.log('Received schedule data:', scheduleData);
 
-                if (!state.baseWeekNumber) {
-                    const calculatedWeek = getAcademicWeekNumber();
-                    //console.log('Математически рассчитанная неделя:', calculatedWeek);
-
-                    const weeksInAPI = [...new Set(scheduleData.lessons.map(l => l.numberWeek))];
-                    //console.log('Недели в API:', weeksInAPI);
-
-                    const baseWeek = weeksInAPI.includes(calculatedWeek) ? calculatedWeek :
-                        weeksInAPI.includes(1) ? 1 : 2;
-
-                    //console.log('Установлена базовая неделя:', baseWeek);
-                    commit('SET_BASE_WEEK_NUMBER', baseWeek);
-                    commit('SET_CURRENT_WEEK_NUMBER', baseWeek);
-                    commit('SET_CURRENT_WEEK_TYPE', `week${baseWeek}`);
-                }
-
-                // Вызываем как отдельный action
-                await dispatch('processScheduleData', { scheduleData, searchType: state.searchType });
+                await dispatch('processScheduleData', {
+                    scheduleData,
+                    searchType: state.searchType
+                });
 
             } catch (error) {
                 console.error('Ошибка загрузки расписания:', error);
@@ -681,40 +710,56 @@ export default createStore({
 
 
 
-        async fetchAllDataLists({ commit }) {
+        async fetchAllDataLists({ commit, state }) {
             try {
-                const response = await fetch(`${localhost}/api/users`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id: 123231,
-                        firstname: "Test",
-                        username: "testuser"
-                    })
-                });
+                // Если есть данные пользователя, используем их
+                if (state.userData) {
+                    const response = await fetch(`${localhost}/api/users`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: state.userData.id,
+                            firstname: state.userData.firstname,
+                            username: state.userData.username
+                        })
+                    });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                    const data = await response.json();
+
+                    commit('SET_ALL_DATA_LISTS', {
+                        groups: data.data?.groups || [],
+                        teachers: data.data?.teachers || [],
+                        rooms: data.data?.rooms || []
+                    });
+
+                    commit('SET_SERVER_NOTES', data.notes || []);
+                    return data;
+                } else {
+                    // Fallback для случая, когда нет данных пользователя
+                    const response = await fetch(`${localhost}/api/users`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: 123231,
+                            firstname: "Test",
+                            username: "testuser"
+                        })
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                    const data = await response.json();
+                    commit('SET_ALL_DATA_LISTS', {
+                        groups: data.data?.groups || [],
+                        teachers: data.data?.teachers || [],
+                        rooms: data.data?.rooms || []
+                    });
+
+                    commit('SET_SERVER_NOTES', data.notes || []);
+                    return data;
                 }
-
-                const data = await response.json();
-                //console.log('Получены данные с сервера:', data); // Добавим лог для отладки
-
-                // Проверяем наличие notes в ответе
-                if (!data.notes) {
-                    console.warn('Сервер не вернул заметки в ответе');
-                    data.notes = [];
-                }
-
-                commit('SET_ALL_DATA_LISTS', {
-                    groups: data.data?.groups || [],
-                    teachers: data.data?.teachers || [],
-                    rooms: data.data?.rooms || []
-                });
-
-                commit('SET_SERVER_NOTES', data.notes);
-
-                return data;
             } catch (error) {
                 console.error('Ошибка загрузки данных:', error);
                 commit('SET_ERROR', 'Не удалось загрузить данные с сервера');
@@ -732,7 +777,123 @@ export default createStore({
 
 
 
+        async fetchUserData({ commit }) {
+            try {
+                let userData;
 
+                // Проверяем, открыто ли приложение в Telegram
+                if (window.Telegram && window.Telegram.WebApp) {
+                    const initData = window.Telegram.WebApp.initDataUnsafe || {};
+                    userData = {
+                        id: initData.user?.id || null,
+                        firstname: initData.user?.first_name || 'Гость',
+                        username: initData.user?.username || 'guest'
+                    };
+
+                    // console.log('[Telegram WebApp Data]', {
+                    //     initDataUnsafe: window.Telegram.WebApp.initDataUnsafe,
+                    //     themeParams: window.Telegram.WebApp.themeParams,
+                    //     colorScheme: window.Telegram.WebApp.colorScheme,
+                    //     platform: window.Telegram.WebApp.platform,
+                    //     version: window.Telegram.WebApp.version
+                    // });
+                } else {
+                    // Для локальной разработки без Telegram
+                    userData = {
+                        id: 123231,
+                        firstname: "Test",
+                        username: "testuser"
+                    };
+                    //console.log('[Local Development] Using test user data');
+                }
+
+                if (!userData.id) {
+                    throw new Error('Не удалось получить ID пользователя');
+                }
+
+                //console.log('[User Data Prepared for API Request]', userData);
+
+                const response = await fetch(`${localhost}/api/users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userData)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('[API Users Error]', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        error: errorText
+                    });
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Детальное логирование полученных данных
+                //console.groupCollapsed('[API Users Response] Full Data Dump');
+                //console.log('1. User Data:', userData);
+                //console.log('2. Response Status:', response.status);
+                //console.log('3. Full Response:', response);
+
+                //console.group('4. Parsed JSON Data:');
+                //console.log('Basic Structure:', {
+                    //schedule: data.schedule ? 'exists' : 'null',
+                    //data: data.data ? 'exists' : 'null',
+                    //notes: data.notes ? `array[${data.notes.length}]` : 'null'
+                //});
+
+                if (data.schedule) {
+                    //console.group('Schedule Details:');
+                    //console.log('Type:', data.schedule.type);
+                    //console.log('Name:', data.schedule.name);
+                    //console.log('Raw:', data.schedule);
+                    //console.groupEnd();
+                }
+
+                if (data.data) {
+                //     console.group('Data Lists:');
+                //     console.log('Groups:', {
+                //         count: data.data.groups?.length,
+                //         sample: data.data.groups?.slice(0, 5)
+                //     });
+                //     console.log('Teachers:', {
+                //         count: data.data.teachers?.length,
+                //         sample: data.data.teachers?.slice(0, 5)
+                //     });
+                //     console.log('Rooms:', {
+                //         count: data.data.rooms?.length,
+                //         sample: data.data.rooms?.slice(0, 5)
+                //     });
+                //     console.groupEnd();
+                }
+
+                if (data.notes) {
+                    //console.group('Notes:');
+                    //console.log('Total Notes:', data.notes.length);
+                    //console.log('Sample Notes:', data.notes.slice(0, 3));
+                    //console.log('Last Note:', data.notes[data.notes.length - 1]);
+                    //console.groupEnd();
+                }
+
+                console.groupEnd(); // End of full data dump
+
+                commit('SET_USER_DATA', userData);
+                commit('SET_USER_SCHEDULE', data.schedule);
+                commit('SET_ALL_DATA_LISTS', data.data);
+                commit('SET_SERVER_NOTES', data.notes);
+
+                return data;
+            } catch (error) {
+                console.error('[fetchUserData Error]', {
+                    error: error,
+                    message: error.message,
+                    stack: error.stack
+                });
+                throw error;
+            }
+        },
 
 
 
@@ -987,24 +1148,46 @@ export default createStore({
 
 
         getLessonPosition: (state) => (note) => {
-            // Преобразуем время пары в номер (1-6)
-            const timeToNumberMap = {
-                '08:00<br>09:30': 1,
-                '09:45<br>11:15': 2,
-                '11:30<br>13:00': 3,
-                '13:50<br>15:20': 4,
-                '15:35<br>17:05': 5,
-                '17:20<br>18:50': 6
-            };
+            // Для серверных заметок
+            if (note.source === 'server' && note.serverData) {
+                return {
+                    numberWeek: note.serverData.number_week,
+                    numberDay: note.serverData.number_day,
+                    number: note.serverData.number
+                };
+            }
 
-            const date = new Date(note.date);
-            const dayOfWeek = date.getDay(); // 0-6 (воскресенье-суббота)
-            const numDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Приводим к 0-5 (пн-сб)
+            // Для локальных заметок
+            const noteDate = new Date(note.date);
+
+            // Получаем день недели (0 - воскресенье, 1 - понедельник, ..., 6 - суббота)
+            let dayOfWeek = noteDate.getDay();
+	    console.log(noteDate, dayOfWeek)
+
+            // Преобразуем в наш формат (1 - понедельник, ..., 6 - суббота)
+            let numberDay = dayOfWeek === 0 ? 6 : dayOfWeek; // Воскресенье -> 6 (суббота)
+
+            // Корректировка: если воскресенье, считаем что это следующая неделя
+            const weekOffset = dayOfWeek === 0 ? 1 : 0;
+
+            // Вычисляем номер недели (1 или 2)
+            const startOfYear = new Date(2024, 8, 1); // 1 сентября
+            if (noteDate < startOfYear) {
+                startOfYear.setFullYear(startOfYear.getFullYear() - 1);
+            }
+
+            const diffTime = noteDate - startOfYear;
+            const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
+            let numberWeek = ((diffWeeks + weekOffset) % 2) + 1;
+
+            // Номер пары
+            const isSaturday = numberDay === 6;
+            const number = getNumberFromTime(note.time, isSaturday) || 1;
 
             return {
-                numberWeek: state.currentWeekNumber,
-                numberDay: numDay + 1, // На сервере дни 1-6
-                number: timeToNumberMap[note.time] || 1
+                numberWeek,
+                numberDay,
+                number
             };
         },
 

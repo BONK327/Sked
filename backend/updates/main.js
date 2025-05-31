@@ -15,6 +15,7 @@ const converterSchedule = new ConverterSchedule();
 
 async function main() {
     const roomIds = (await roomRepository.findAll()).map(room => room.id);
+    console.log("Получен список всех аудиторий")
     const users = [];
     for (const roomId of roomIds) {
         const scheduleDB = await lessonRepository.findByRoom(roomId);
@@ -22,16 +23,24 @@ async function main() {
         const scheduleMiddleDB = converterSchedule.convertDBToMiddle(scheduleDB);
         const scheduleMiddleAPI = converterSchedule.convertAPIRoomToMiddle(scheduleAPI);
         const result = compareSchedule(scheduleMiddleDB, scheduleMiddleAPI);
-        /*
-        * Обработать result.delete и result.create
-        */
+        
+        if (result.create.length !== 0)
+            lessonRepository.bulkCreate(result.create)
+        if (result.delete.length !== 0)
+            lessonRepository.deleteByIds(result.delete)
+
         const newUsers = await userRepository.findAllByTeacherIdAndGroupId(result);
         const uniqueNewUsers = newUsers.filter(
             user => !users.some(existingUser => existingUser.id === user.id)
         );
         users.push(...uniqueNewUsers);
     }
-    await axios.post(`http://${process.env.IP_ADDRESS}:${process.env.TGBOT_PORT}/tgbot`, users)
+    console.log("Обновление расписание завершено")
+    console.log("Получен список пользователей, которых надо оповестить")
+    console.log("Оповещение")
+    if (users.filter(user => user.notifications).length !== 0)
+        await axios.post(`http://${process.env.IP_ADDRESS}:${process.env.TGBOT_PORT}/tgbot`, users.filter(user => user.notifications))
+    console.log("Конец программы")
 }
 
 

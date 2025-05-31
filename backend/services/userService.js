@@ -29,12 +29,10 @@ class UserService {
     async addUser(userData) {
         try {
             const user = await this.userRepository.findById(userData.id);
-            if (!user) {
+            if (!user || user === null) {
                 const newUser = await this.userRepository.createOne(userData);
-                console.log(newUser)
                 return { message: "Успех", user: newUser };
-            }
-            else if (user.username !== userData.username && user.firstname !== userData.firstname) {
+            } else if (user.username !== userData.username && user.firstname !== userData.firstname) {
                 await this.userRepository.updateOne(userData);
                 return { message: "Успех", user: user };
             }
@@ -73,6 +71,17 @@ class UserService {
         const schedule = await this._getSchedule(type, id);
         const data = await this._getData();
         const notes = await this.noteService.findAllNoteByUser(userData.id);
+
+        if (!schedule.name) {
+            if (type == "group") {
+                const group = await this.groupRepository.findById(id)
+                schedule.name = group.name
+            } else {
+                const teacher = await this.teacherRepository.findById(id)
+                schedule.name = teacher.shortname
+            }
+        }
+
         return {
             schedule: schedule,
             data: data,
@@ -137,7 +146,6 @@ class UserService {
         if (type == "group") {
             const schedule = await this.lessonRepository.findByGroup(id);
             const result = this.converterSchedule.convertDBToPresentGroup(schedule);
-            console.log(type)
             return result;
         } else if (type == "teacher") {
             const schedule = await this.lessonRepository.findByTeacher(id);

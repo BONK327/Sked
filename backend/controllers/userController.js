@@ -61,14 +61,17 @@ class UserController {
                     name: "IncorrectBodyError",
                     message: "Incorrect form body for get schedule and data"
                 }
+	    console.log(1)
             const user = {
                 id: req.body.id,
                 firstname: req.body.firstname,
                 username: req.body?.username
             };
+	    console.log(2)
             const response = await this.userService.addUser(user);
+	    console.log(3)
             res.json(response);
-        } catch(error) {
+        } catch (error) {
             if (error.name == "IncorrectBodyError") {
                 res.status(400).json(error);
             } else if (error.name == "NotFoundError") {
@@ -91,7 +94,7 @@ class UserController {
             };
             const response = await this.userService.changeNotifications(user);
             res.json(response);
-        } catch(error) {
+        } catch (error) {
             if (error.name == "IncorrectBodyError") {
                 res.status(400).json(error);
             } else if (error.name == "NotFoundError") {

@@ -4,6 +4,7 @@
       <span v-if="currentGroup">{{ formattedGroupName }}</span>
       <span v-else-if="currentTeacher">{{ formattedTeacherName }}</span>
       <span v-else-if="currentRoom">{{ currentRoom }}</span>
+      <span v-else>Расписание</span>
     </h1>
     <strong class="name__slash">|</strong>
     <h2 class="name__week">
@@ -32,33 +33,42 @@ export default {
       'baseWeekNumber',
       'currentWeekOffset'
     ]),
+    weekName() {
+      return `Неделя ${this.currentWeekNumber}`;
+    },
     apiWeekNumber() {
       return this.baseWeekNumber || 'N/A';
-    },
-    weekName() {
-      return ` Неделя ${this.currentWeekNumber}`;
     },
     weekOffset() {
       return this.currentWeekOffset || 0;
     },
+    hasSchedule() {
+      return this.currentGroup || this.currentTeacher || this.currentRoom;
+    },
     formattedTeacherName() {
       if (!this.currentTeacher) return '';
-      const parts = this.currentTeacher.split('_');
-      let formatted = this.capitalizeFirstLetter(parts[0]);
-      if (parts.length > 1 && parts[1]) {
-        formatted += ` ${this.capitalizeFirstLetter(parts[1])}.`;
+
+      // Если имя уже в формате "Иванов И.И.", просто возвращаем его
+      if (this.currentTeacher.match(/[а-яё]+\s[А-Я]\.\s?[А-Я]?\.?/i)) {
+        return this.currentTeacher;
       }
-      if (parts.length > 2 && parts[2]) {
-        formatted += ` ${this.capitalizeFirstLetter(parts[2])}.`;
+
+      // Для формата API "Иванов_И_И"
+      const parts = this.currentTeacher.split('_');
+      let formatted = parts[0];
+      if (parts[1]) {
+        formatted += ` ${parts[1][0].toUpperCase()}. `;
+      }
+      if (parts[2]) {
+        formatted += `${parts[2][0].toUpperCase()}. `;
       }
       return formatted;
     },
     formattedGroupName() {
       if (!this.currentGroup) return '';
-      // Форматируем группу (ПИ2303 вместо пи2303)
       const firstDigitIndex = this.currentGroup.search(/\d/);
       if (firstDigitIndex === -1) return this.currentGroup.toUpperCase();
-      
+
       const letters = this.currentGroup.slice(0, firstDigitIndex).toUpperCase();
       const numbers = this.currentGroup.slice(firstDigitIndex);
       return letters + numbers;

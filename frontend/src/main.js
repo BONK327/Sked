@@ -27,16 +27,6 @@ const applyTelegramTheme = () => {
   } else {
     document.body.classList.remove('tg-dark')
   }
-
-
-  plugins: [
-    store => {
-      store.subscribe((mutation, state) => {
-        console.log('[Vuex Mutation]', mutation.type, mutation.payload);
-        console.log('[Vuex State]', state);
-      });
-    }
-  ]
 }
 
 // Применяем тему при загрузке
@@ -44,6 +34,7 @@ applyTelegramTheme()
 
 // Слушаем изменения темы
 window.Telegram?.WebApp?.onEvent('themeChanged', applyTelegramTheme)
+
 
 app.use(store)
 app.mount('#app')

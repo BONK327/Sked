@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from telebot import TeleBot, custom_filters
 from telebot.storage import StateMemoryStorage
 
-from tgbot.handlers import *
+from handlers import *
 
 load_dotenv()
 

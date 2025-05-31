@@ -26,11 +26,6 @@ class TeacherService {
                 }
             }
             const scheduleDB = await this.lessonRepository.findByTeacher(teacher.id);
-            if (scheduleDB.length === 0)
-                throw {
-                    name: "ForbiddenError",
-                    message: `Teacher '${shortname}' forbidden`
-                }
             const schedulePresent = this.converterSchedule.convertDBToPresentTeacher(scheduleDB);
             schedulePresent.name = teacher.shortname
             return schedulePresent;

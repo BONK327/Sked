@@ -2,10 +2,10 @@ from telebot import TeleBot
 from telebot.types import Message
 
 
-from tgbot.keyboards import main_menu_keyboard, choice_type_keyboard, cancel_keyboard
-from tgbot.filters import *
-from tgbot.states import states
-from tgbot.queries import *
+from keyboards import main_menu_keyboard, choice_type_keyboard, cancel_keyboard
+from filters import *
+from states import states
+from queries import *
 
 
 
@@ -19,7 +19,19 @@ def register_handlers(bot: TeleBot):
         user_firstname = message.from_user.first_name
         user_username = message.from_user.username
         user = post_user_data(user_id, user_firstname, user_username)
-        bot.send_message(user_id, f"{user_firstname}, приветствую!\nЯ бот КубГАУ, который отображает расписание и сообщает об его изменении.",
+        print(1)
+        bot.send_message(user_id, f"""Приветствую, {user_firstname}!
+
+Я — бот КубГАУ для отслеживания расписания.
+
+Мои функции:
+✔️ Показ актуального расписания
+✔️ Уведомления об изменениях в расписании
+✔️ Функция выбора ФИО преподавателя/группы для быстрого доступа к нужному расписанию
+
+Управление:
+🔘 🔔Включить/выключить уведомления – включить/выключить рассылку уведомлений об изменении в отслеживаемом расписании
+🔘 📅 Выбрать отслеживаемое расписание – выбрать группу/преподавателя, чьё расписание будет автоматически отображаться при запуске приложения""",
                          reply_markup=main_menu_keyboard(user['notifications']))
 
 
@@ -30,7 +42,18 @@ def register_handlers(bot: TeleBot):
         user_firstname = callback.from_user.first_name
         user = post_change_notifications(user_id)
         bot.answer_callback_query(callback.id, f"Уведомления {'включены' if user['notifications'] else 'выключены'}")
-        bot.edit_message_text(f"{user_firstname}, приветствую!\nЯ бот КубГАУ, который oтображает расписание и сообщает об его изменении.",
+        bot.edit_message_text(f"""Приветствую, {user_firstname}!
+
+Я — бот КубГАУ для отслеживания расписания.
+
+Мои функции:
+✔️ Показ актуального расписания
+✔️ Уведомления об изменениях в расписании
+✔️ Функция выбора ФИО преподавателя/группы для быстрого доступа к нужному расписанию
+
+Управление:
+🔘 🔔Включить/выключить уведомления – включить/выключить рассылку уведомлений об изменении в отслеживаемом расписании
+🔘 📅 Выбрать отслеживаемое расписание – выбрать группу/преподавателя, чьё расписание будет автоматически отображаться при запуске приложения""",
                               user_id, callback.message.id, reply_markup=main_menu_keyboard(user['notifications']))
         
     
@@ -41,14 +64,25 @@ def register_handlers(bot: TeleBot):
         user_username = callback.from_user.username
         bot.delete_state(user_id, user_id)
         user = post_user_data(user_id, user_firstname, user_username)
-        bot.edit_message_text(f"{user_firstname}, приветствую!\nЯ бот КубГАУ, который oтображает расписание и сообщает об его изменении.",
+        bot.edit_message_text(f"""Приветствую, {user_firstname}!
+
+Я — бот КубГАУ для отслеживания расписания.
+
+Мои функции:
+✔️ Показ актуального расписания
+✔️ Уведомления об изменениях в расписании
+✔️ Функция выбора ФИО преподавателя/группы для быстрого доступа к нужному расписанию
+
+Управление:
+🔘 🔔Включить/выключить уведомления – включить/выключить рассылку уведомлений об изменении в отслеживаемом расписании
+🔘 📅 Выбрать отслеживаемое расписание – выбрать группу/преподавателя, чьё расписание будет автоматически отображаться при запуске приложения""",
                               user_id, callback.message.id, reply_markup=main_menu_keyboard(user['notifications']))
 
 
     @bot.callback_query_handler(func=lambda callback: choice_type_filter(callback))
     def choice_type_callback_handler(callback: CallbackQuery):
         user_id = callback.from_user.id
-        bot.edit_message_text("Выберете роль", user_id, callback.message.id,
+        bot.edit_message_text("Выберите роль", user_id, callback.message.id,
                               reply_markup=choice_type_keyboard())
     
 
@@ -74,10 +108,10 @@ def register_handlers(bot: TeleBot):
         group_name = message.text
         data = post_change_schedule(user_id, 'group', group_name)
         if (data[0] == 404):
-            bot.send_message(user_id, "Такой группы не существует",
+            bot.send_message(user_id, "Группа не найдена. Попробуйте снова",
                              reply_markup=cancel_keyboard())
         else:
-            bot.send_message(user_id, "Расписание успешно изменилось",
+            bot.send_message(user_id, "Расписание успешно выбрано",
                              reply_markup=cancel_keyboard())
             bot.delete_state(user_id, user_id)
 
@@ -88,9 +122,9 @@ def register_handlers(bot: TeleBot):
         teacher_name = message.text
         data = post_change_schedule(user_id, 'teacher', teacher_name)
         if (data[0] == 404):
-            bot.send_message(user_id, "Такого преподавателя не существует",
+            bot.send_message(user_id, "Преподаватель не найден. Попробуйте снова",
                              reply_markup=cancel_keyboard())
         else:
-            bot.send_message(user_id, "Расписание успешно изменилось",
+            bot.send_message(user_id, "Расписание успешно выбрано",
                              reply_markup=cancel_keyboard())
             bot.delete_state(user_id, user_id)

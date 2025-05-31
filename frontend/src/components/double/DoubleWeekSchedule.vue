@@ -10,7 +10,7 @@
               <h4 class="table__title">{{ firstTitle || 'Первое расписание' }}</h4>
               <div class="table__content">
                 <div v-for="(row, rowIndex) in getTimeSlotsForDay(dayIndex)" :key="'first-' + rowIndex"
-                  class="table__content-row">
+                  class="table__content-row" :ref="`first-row-${dayIndex}-${rowIndex}`">
                   <div class="table__content-row-time" v-html="row.time"></div>
                   <div class="table__content-row-color" :class="{
                     'table__content-row-color--lection': getLessonType(dayIndex, row.time, 'first') === 'lection',
@@ -40,7 +40,7 @@
               <h4 class="table__title">{{ secondTitle || 'Второе расписание' }}</h4>
               <div class="table__content">
                 <div v-for="(row, rowIndex) in getTimeSlotsForDay(dayIndex)" :key="'second-' + rowIndex"
-                  class="table__content-row">
+                  class="table__content-row" :ref="`second-row-${dayIndex}-${rowIndex}`">
                   <div class="table__content-row-time" v-html="row.time"></div>
                   <div class="table__content-row-color" :class="{
                     'table__content-row-color--lection': getLessonType(dayIndex, row.time, 'second') === 'lection',
@@ -141,8 +141,14 @@ export default {
           const rows2 = tables[1].querySelectorAll('.table__content-row');
           
           // Сначала сбросим все высоты
-          rows1.forEach(row => row.style.minHeight = '');
-          rows2.forEach(row => row.style.minHeight = '');
+          rows1.forEach(row => {
+            row.style.minHeight = '';
+            row.style.height = '';
+          });
+          rows2.forEach(row => {
+            row.style.minHeight = '';
+            row.style.height = '';
+          });
           
           // Затем синхронизируем
           rows1.forEach((row1, index) => {
@@ -157,7 +163,9 @@ export default {
             const maxHeight = Math.max(height1, height2);
             if (maxHeight > 0) {
               row1.style.minHeight = `${maxHeight}px`;
+              row1.style.height = `${maxHeight}px`;
               row2.style.minHeight = `${maxHeight}px`;
+              row2.style.height = `${maxHeight}px`;
             }
           });
         });
@@ -337,7 +345,6 @@ export default {
     }
     
     window.addEventListener('resize', this.syncRowHeights);
-    // Добавляем обработчик изменения ориентации
     window.addEventListener('orientationchange', this.syncRowHeights);
   },
 
@@ -407,24 +414,24 @@ export default {
     width: calc(90vw - 2rem)
     display: flex
     flex-direction: column
-    flex: 0 0 auto
+    flex: 1 0 auto
     transition: min-width 0.3s ease, width 0.3s ease
 
 .table
   width: 100%
   flex: 1
-  background-color: var(--app-secondary-bg)
-  overflow: hidden
   display: flex
-  flex-direction: column
-  border: clamp(0.05rem, 0.3vw, 0.1rem) solid var(--app-border-color)
-  border-radius: clamp(0.3rem, 1vw, 0.5rem)
-
-  &__title
+  flex-direction: column 
+  background-color: var(--app-secondary-bg) 
+  overflow: hidden 
+  border: clamp(0.05rem, 0.3vw, 0.1rem) solid var(--app-border-color) 
+  border-radius: clamp(0.3rem, 1vw, 0.5rem) 
+ 
+  &__title 
     font-size: clamp(0.9rem, 3.5vw, 1.15rem)
     font-weight: 600
     padding: clamp(0.4rem, 1.8vw, 0.9rem)
-    background-color: var(--app-primary-color)
+    background-color: #23783a
     color: $color-white
     text-align: center
     margin: 0

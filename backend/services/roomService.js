@@ -27,6 +27,7 @@ class RoomService {
             }
             const scheduleDB = await this.lessonRepository.findByRoom(room.id);
             const schedulePresent = this.converterSchedule.convertDBToPresentRoom(scheduleDB);
+            schedulePresent.name = room.name
             return schedulePresent;
         } catch (error) {
             if (error.name == "NotFoundError") {
