@@ -6,24 +6,16 @@ const TeacherModel = require("./teacherModel");
 const UserModel = sequelize.define("User",
     {
         id: {
-            type: DataTypes.INTEGER.UNSIGNED,
+            type: DataTypes.BIGINT.UNSIGNED,
             primaryKey: true,
             allowNull: false
         },
-        group_id: {
-            type: DataTypes.INTEGER.UNSIGNED,
-            allowNull: true
-        },
-        teacher_id: {
-            type: DataTypes.INTEGER.UNSIGNED,
-            allowNull: true
-        },
         username: {
-            type: DataTypes.STRING(30),
+            type: DataTypes.STRING(32),
             allowNull: true
         },
         firstname: {
-            type: DataTypes.STRING(30),
+            type: DataTypes.STRING(64),
             allowNull: false
         },
         notifications: {
@@ -32,7 +24,6 @@ const UserModel = sequelize.define("User",
         }
     }, {
         tableName: 'users',
-        timestamps: false,
     }
 )
 

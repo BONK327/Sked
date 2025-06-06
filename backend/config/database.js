@@ -8,7 +8,12 @@ const sequelize = new Sequelize(
     {
         host: process.env.DATABASE_HOST,
         dialect: 'mysql',
-        logging: false
+        // logging: db.log
+        define: {
+            timestamps: false,
+            underscored: true
+        },
+        timezone: "+03:00"
     }
 );
 

@@ -7,16 +7,16 @@ const GroupModel = require("./groupModel");
 const LessonModel = sequelize.define("Lesson",
     {
         id: {
-            type: DataTypes.INTEGER.UNSIGNED,
+            type: DataTypes.BIGINT.UNSIGNED,
             primaryKey: true,
             autoIncrement: true,
             allowNull: false
         },
-        number_week: {
+        numberWeek: {
             type: DataTypes.TINYINT.UNSIGNED,
             allowNull: false
         },
-        number_day: {
+        numberDay: {
             type: DataTypes.TINYINT.UNSIGNED,
             allowNull: false
         },
@@ -33,15 +33,15 @@ const LessonModel = sequelize.define("Lesson",
             allowNull: false,
             defaultValue: 'seminar'
         },
-        teacher_id: {
+        teacherId: {
             type: DataTypes.INTEGER.UNSIGNED,
             allowNull: false
         },
-        room_id: {
+        roomId: {
             type: DataTypes.INTEGER.UNSIGNED,
             allowNull: false
         },
-        group_id: {
+        groupId: {
             type: DataTypes.INTEGER.UNSIGNED,
             allowNull: false
         },
@@ -50,15 +50,14 @@ const LessonModel = sequelize.define("Lesson",
             defaultValue: null
         }
     }, {
-        tableName: 'lessons',
-        timestamps: false,
+        tableName: 'lessons'
     }
 )
 
 LessonModel.belongsTo(
     TeacherModel,
     {
-        foreignKey: "teacher_id",
+        foreignKey: "teacherId",
         as: "teacher"
     }
 )
@@ -66,7 +65,7 @@ LessonModel.belongsTo(
 LessonModel.belongsTo(
     RoomModel,
     {
-        foreignKey: "room_id",
+        foreignKey: "roomId",
         as: "room"
     }
 )
@@ -74,7 +73,7 @@ LessonModel.belongsTo(
 LessonModel.belongsTo(
     GroupModel,
     {
-        foreignKey: "group_id",
+        foreignKey: "groupId",
         as: "group"
     }
 )

@@ -15,7 +15,13 @@ const RoomModel = sequelize.define("Room",
         }
     }, {
         tableName: 'rooms',
-        timestamps: false,
+        indexes: [
+            {
+                name: 'name',
+                unique: true,
+                fields: ['name']
+            }
+        ]
     }
 )
 

@@ -5,20 +5,20 @@ const UserModel = require("./userModel");
 const NoteModel = sequelize.define("Note",
     {
         id: {
-            type: DataTypes.INTEGER.UNSIGNED,
+            type: DataTypes.BIGINT.UNSIGNED,
             primaryKey: true,
             allowNull: false,
             autoIncrement: true
         },
-        user_id: {
-            type: DataTypes.INTEGER.UNSIGNED,
+        userId: {
+            type: DataTypes.BIGINT.UNSIGNED,
             allowNull: false
         },
-        number_week: {
+        numberWeek: {
             type: DataTypes.TINYINT.UNSIGNED,
             allowNull: false
         },
-        number_day: {
+        numberDay: {
             type: DataTypes.TINYINT.UNSIGNED,
             allowNull: false
         },
@@ -32,7 +32,13 @@ const NoteModel = sequelize.define("Note",
         }
     }, {
         tableName: 'notes',
-        timestamps: false,
+        indexes: [
+            {
+                name: 'user_id',
+                unique: true,
+                fields: ['user_id', 'number_week', 'number_day', 'number']
+            }
+        ]
     }
 );
 
@@ -40,7 +46,7 @@ const NoteModel = sequelize.define("Note",
 NoteModel.belongsTo(
     UserModel,
     {
-        foreignKey: "user_id",
+        foreignKey: "userId",
         as: "user"
     }
 );

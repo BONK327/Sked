@@ -15,7 +15,13 @@ const GroupModel = sequelize.define("Group",
         }
     }, {
         tableName: 'groups',
-        timestamps: false,
+        indexes: [
+            {
+                name: 'name',
+                unique: true,
+                fields: ['name']
+            }
+        ]
     }
 )
 

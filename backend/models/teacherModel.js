@@ -9,24 +9,30 @@ const TeacherModel = sequelize.define("Teacher",
             allowNull: false
         },
         lastname: {
-            type: DataTypes.STRING(20),
+            type: DataTypes.STRING(25),
             allowNull: false
         },
         firstname: {
-            type: DataTypes.STRING(20),
+            type: DataTypes.STRING(25),
             allowNull: false
         },
         middlename: {
-            type: DataTypes.STRING(20),
+            type: DataTypes.STRING(25),
             allowNull: true
         },
         shortname: {
-            type: DataTypes.STRING(24),
+            type: DataTypes.STRING(30),
             allowNull: false
         }
     }, {
         tableName: 'teachers',
-        timestamps: false,
+        indexes: [
+            {
+                name: 'idx_shortname',
+                type: 'FULLTEXT',
+                fields: ['name']
+            }
+        ]
     }
 )
 
