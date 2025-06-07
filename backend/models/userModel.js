@@ -28,21 +28,4 @@ const UserModel = sequelize.define("User",
 )
 
 
-UserModel.belongsTo(
-    GroupModel,
-    {
-        foreignKey: "group_id",
-        as: "group"
-    }
-)
-
-UserModel.belongsTo(
-    TeacherModel,
-    {
-        foreignKey: "teacher_id",
-        as: "teacher"
-    }
-)
-
-
 module.exports = UserModel;
