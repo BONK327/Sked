@@ -1,8 +1,8 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
-const UserModel = require("./userModel");
-const GroupModel = require("./groupModel");
-const TeacherModel = require("./teacherModel");
+const UserModel = require("./UserModel");
+const GroupModel = require("./GroupModel");
+const TeacherModel = require("./TeacherModel");
 
 const RelationshipsUsersModel = sequelize.define("RelationshipUser",
     {
