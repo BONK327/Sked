@@ -89,45 +89,29 @@ export default {
       });
     },
     currentNote() {
-      try {
-        // Получаем ID заметки безопасным способом
-        const noteId = this.noteDialog.noteId?.noteId || this.noteDialog.noteId;
+      const noteId = this.noteDialog.noteId?.noteId || this.noteDialog.noteId;
+      if (!noteId) return {
+        id: null,
+        lesson: '',
+        time: '',
+        content: '',
+        numberWeek: 1,
+        numberDay: 1,
+        number: 1,
+        source: 'server'
+      };
 
-        // Если ID нет, возвращаем пустой объект
-        if (!noteId) {
-          return {
-            id: null,
-            lesson: '',
-            time: '',
-            content: '',
-            date: '',
-            source: 'local'
-          };
-        }
-
-        // Получаем заметку из хранилища
-        const note = this.$store.getters.getNoteById(noteId);
-
-        // Если заметка не найдена, возвращаем пустой объект
-        return note || {
-          id: null,
-          lesson: '',
-          time: '',
-          content: '',
-          date: '',
-          source: 'local'
-        };
-      } catch (error) {
-        console.error('Error getting current note:', error);
-        return {
-          id: null,
-          lesson: '',
-          time: '',
-          content: '',
-          date: '',
-          source: 'local'
-        };
-      }
+      const note = this.$store.getters.getNoteById(noteId);
+      return note || {
+        id: null,
+        lesson: '',
+        time: '',
+        content: '',
+        numberWeek: 1,
+        numberDay: 1,
+        number: 1,
+        source: 'server'
+      };
     },
     formattedTime() {
       return this.currentNote.time ? this.currentNote.time.replace('<br>', ' - ') : '';

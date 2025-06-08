@@ -288,6 +288,12 @@ export default createStore({
         SET_TEACHER_API_QUERY(state, query) {
             state.teacherApiQuery = query;
         },
+        SET_SERVER_NOTES(state, notes) {
+            state.serverNotes = notes.map(note => ({
+                ...note,
+                id: `server-${note.number_week}-${note.number_day}-${note.number}`
+            }));
+        },
 
 
 
@@ -839,9 +845,9 @@ export default createStore({
 
                 //console.group('4. Parsed JSON Data:');
                 //console.log('Basic Structure:', {
-                    //schedule: data.schedule ? 'exists' : 'null',
-                    //data: data.data ? 'exists' : 'null',
-                    //notes: data.notes ? `array[${data.notes.length}]` : 'null'
+                //schedule: data.schedule ? 'exists' : 'null',
+                //data: data.data ? 'exists' : 'null',
+                //notes: data.notes ? `array[${data.notes.length}]` : 'null'
                 //});
 
                 if (data.schedule) {
@@ -853,20 +859,20 @@ export default createStore({
                 }
 
                 if (data.data) {
-                //     console.group('Data Lists:');
-                //     console.log('Groups:', {
-                //         count: data.data.groups?.length,
-                //         sample: data.data.groups?.slice(0, 5)
-                //     });
-                //     console.log('Teachers:', {
-                //         count: data.data.teachers?.length,
-                //         sample: data.data.teachers?.slice(0, 5)
-                //     });
-                //     console.log('Rooms:', {
-                //         count: data.data.rooms?.length,
-                //         sample: data.data.rooms?.slice(0, 5)
-                //     });
-                //     console.groupEnd();
+                    //     console.group('Data Lists:');
+                    //     console.log('Groups:', {
+                    //         count: data.data.groups?.length,
+                    //         sample: data.data.groups?.slice(0, 5)
+                    //     });
+                    //     console.log('Teachers:', {
+                    //         count: data.data.teachers?.length,
+                    //         sample: data.data.teachers?.slice(0, 5)
+                    //     });
+                    //     console.log('Rooms:', {
+                    //         count: data.data.rooms?.length,
+                    //         sample: data.data.rooms?.slice(0, 5)
+                    //     });
+                    //     console.groupEnd();
                 }
 
                 if (data.notes) {
@@ -948,7 +954,6 @@ export default createStore({
 
         // Обновленный метод для добавления заметки
         async addNote({ commit, dispatch, state }, note) {
-            // Добавляем только на сервер, затем обновляем список
             try {
                 const pos = this.getters.getLessonPosition(note);
                 await dispatch('syncNoteToServer', {
@@ -957,81 +962,44 @@ export default createStore({
                     num: pos.number,
                     text: note.content
                 });
-
-                // Обновляем весь список с сервера
                 await dispatch('fetchAllDataLists');
             } catch (error) {
                 console.error('Ошибка синхронизации:', error);
-                // Можно добавить уведомление пользователю
             }
         },
 
         async updateNote({ commit, dispatch, state }, updatedNote) {
             try {
-                // Для серверных заметок
-                if (updatedNote.source === 'server') {
-                    const pos = {
-                        numberWeek: updatedNote.serverData.number_week,
-                        numberDay: updatedNote.serverData.number_day,
-                        number: updatedNote.serverData.number
-                    }
-
-                    await dispatch('syncNoteToServer', {
-                        numWeek: pos.numberWeek,
-                        numDay: pos.numberDay,
-                        num: pos.number,
-                        text: updatedNote.content
-                    })
-                }
-                // Для локальных заметок
-                else {
-                    const pos = this.getters.getLessonPosition(updatedNote)
-                    await dispatch('syncNoteToServer', {
-                        numWeek: pos.numberWeek,
-                        numDay: pos.numberDay,
-                        num: pos.number,
-                        text: updatedNote.content
-                    })
-                }
-
-                // Обновляем данные
-                await dispatch('fetchAllDataLists')
+                const pos = this.getters.getLessonPosition(updatedNote);
+                await dispatch('syncNoteToServer', {
+                    numWeek: pos.numberWeek,
+                    numDay: pos.numberDay,
+                    num: pos.number,
+                    text: updatedNote.content
+                });
+                await dispatch('fetchAllDataLists');
             } catch (error) {
-                console.error('Update note error:', error)
-                throw error
+                console.error('Update note error:', error);
+                throw error;
             }
         },
 
-        // Обновленный метод для удаления заметки
-        async deleteNote({ commit, dispatch, state }, noteId) {
-            const note = state.notes.find(n => n.id === noteId) ||
-                state.serverNotes.find(n => `server-${n.number_week}-${n.number_day}-${n.number}` === noteId);
-
-            if (!note) return;
-
-            // Удаляем из локального хранилища
-            commit('DELETE_NOTE', noteId);
-
-            // Для серверных заметок
-            if (noteId.startsWith('server-')) {
-                const [_, numWeek, numDay, num] = noteId.match(/server-(\d+)-(\d+)-(\d+)/) || [];
-                await dispatch('deleteNoteFromServer', {
-                    numWeek: parseInt(numWeek),
-                    numDay: parseInt(numDay),
-                    num: parseInt(num)
-                });
-            } else {
-                // Для локальных заметок
-                const { numberWeek, numberDay, number } = this.getters.getLessonPosition(note);
-                await dispatch('deleteNoteFromServer', {
-                    numWeek: numberWeek,
-                    numDay: numberDay,
-                    num: number
-                });
+        async deleteNote({ commit, dispatch }, noteId) {
+            try {
+                // Для серверных заметок
+                if (noteId.startsWith('server-')) {
+                    const [_, numWeek, numDay, num] = noteId.match(/server-(\d+)-(\d+)-(\d+)/) || [];
+                    await dispatch('deleteNoteFromServer', {
+                        numWeek: parseInt(numWeek),
+                        numDay: parseInt(numDay),
+                        num: parseInt(num)
+                    });
+                }
+                await dispatch('fetchAllDataLists');
+            } catch (error) {
+                console.error('Delete note error:', error);
+                throw error;
             }
-
-            // Обновляем список с сервера
-            await dispatch('fetchAllDataLists');
         },
 
 
@@ -1147,7 +1115,29 @@ export default createStore({
 
 
 
-        getLessonPosition: (state) => (note) => {
+        allNotes: (state, getters) => {
+            const serverNotes = state.serverNotes.map(note => {
+                const lesson = getters.getLessonByServerNote(note) || {};
+                return {
+                    id: `server-${note.number_week}-${note.number_day}-${note.number}`,
+                    lesson: lesson.lesson || 'Неизвестная пара',
+                    time: convertNumberToTime(note.number, note.number_day === 6),
+                    content: note.text,
+                    numberWeek: note.number_week,
+                    numberDay: note.number_day,
+                    number: note.number,
+                    source: 'server',
+                    serverData: note,
+                    // Добавляем teacher и room для корректного отображения в списке
+                    teacher: lesson.teachers?.[0]?.name || '',
+                    room: lesson.room || (lesson.teachers?.[0]?.room || '')
+                };
+            });
+
+            return [...serverNotes];
+        },
+
+        getLessonPosition: () => (note) => {
             // Для серверных заметок
             if (note.source === 'server' && note.serverData) {
                 return {
@@ -1157,70 +1147,12 @@ export default createStore({
                 };
             }
 
-            // Для локальных заметок
-            const noteDate = new Date(note.date);
-
-            // Получаем день недели (0 - воскресенье, 1 - понедельник, ..., 6 - суббота)
-            let dayOfWeek = noteDate.getDay();
-	    console.log(noteDate, dayOfWeek)
-
-            // Преобразуем в наш формат (1 - понедельник, ..., 6 - суббота)
-            let numberDay = dayOfWeek === 0 ? 6 : dayOfWeek; // Воскресенье -> 6 (суббота)
-
-            // Корректировка: если воскресенье, считаем что это следующая неделя
-            const weekOffset = dayOfWeek === 0 ? 1 : 0;
-
-            // Вычисляем номер недели (1 или 2)
-            const startOfYear = new Date(2024, 8, 1); // 1 сентября
-            if (noteDate < startOfYear) {
-                startOfYear.setFullYear(startOfYear.getFullYear() - 1);
-            }
-
-            const diffTime = noteDate - startOfYear;
-            const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
-            let numberWeek = ((diffWeeks + weekOffset) % 2) + 1;
-
-            // Номер пары
-            const isSaturday = numberDay === 6;
-            const number = getNumberFromTime(note.time, isSaturday) || 1;
-
+            // Для локальных заметок (если остались)
             return {
-                numberWeek,
-                numberDay,
-                number
+                numberWeek: note.numberWeek || 1,
+                numberDay: note.numberDay || 1,
+                number: note.number || 1
             };
-        },
-
-        // Объединенные заметки (из БД и localStorage)
-        allNotes: (state, getters) => {
-            const localNotes = state.notes.map(note => ({
-                ...note,
-                source: 'local'
-            }));
-
-            const serverNotes = state.serverNotes
-                .filter(note => {
-                    const lesson = getters.getLessonByServerNote(note);
-                    return lesson && lesson.lesson; // Фильтруем заметки без урока
-                })
-                .map(note => {
-                    const lesson = getters.getLessonByServerNote(note) || {};
-                    const noteDate = convertToDate(note.number_week, note.number_day);
-
-                    return {
-                        id: `server-${note.number_week}-${note.number_day}-${note.number}`,
-                        lesson: lesson.lesson,
-                        time: convertNumberToTime(note.number, note.number_day === 6),
-                        content: note.text,
-                        date: noteDate,
-                        teacher: lesson.teacher || '',
-                        room: lesson.room || '',
-                        source: 'server',
-                        serverData: note
-                    };
-                });
-
-            return [...localNotes, ...serverNotes];
         },
 
         getLessonByServerNote: (state) => (serverNote) => {
@@ -1314,7 +1246,29 @@ export default createStore({
                 numberDay,
                 number
             };
+        },
+
+        getLessonsWithNotes: (state, getters) => (weekNumber, dayIndex) => {
+            const lessons = state.weeksData[`week${weekNumber}`]?.[dayIndex] || [];
+            const notes = getters.allNotes;
+
+            return lessons.map(lesson => {
+                const number = getNumberFromTime(lesson.time, dayIndex === 5);
+                const hasNote = notes.some(note =>
+                    note.numberWeek === weekNumber &&
+                    note.numberDay === dayIndex + 1 &&
+                    note.number === number
+                );
+
+                return {
+                    ...lesson,
+                    hasNote
+                };
+            });
         }
+
+
+
     }
 })
 

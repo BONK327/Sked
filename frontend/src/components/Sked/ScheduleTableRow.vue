@@ -23,6 +23,7 @@
 
 <script>
 import { mapGetters } from 'vuex'
+import { getNumberFromTime } from '@/components/utils/notes'
 
 export default {
   name: 'ScheduleTableRow',
@@ -56,31 +57,18 @@ export default {
 
     hasNote() {
       const notes = this.$store.getters.allNotes || [];
-      const selectedDate = this.selectedDay?.originalDate?.toISOString().split('T')[0] ||
-        new Date().toISOString().split('T')[0];
+      const currentDayIndex = this.$store.state.selectedDayIndex;
+      const isSaturday = currentDayIndex === 5;
 
-      return notes.some(note => {
-        const noteDate = note.date || '';
-        const noteTime = note.time || '';
+      const number = getNumberFromTime(this.row.time, isSaturday);
+      if (!number) return false;
 
-        // Для серверных заметок проверяем по номеру недели/дня/пары
-        if (note.source === 'server') {
-          const pos = this.$store.getters.getLessonPosition(note);
-          const currentPos = this.$store.getters.getLessonPosition({
-            date: selectedDate,
-            time: this.row.time
-          });
-
-          return pos.numberWeek === currentPos.numberWeek &&
-            pos.numberDay === currentPos.numberDay &&
-            pos.number === currentPos.number;
-        }
-
-        // Для локальных - полное сравнение
-        return note.date === selectedDate &&
-          note.time === this.row.time &&
-          note.lesson === this.row.lesson;
-      });
+      return notes.some(note =>
+        note.numberWeek === this.$store.state.currentWeekNumber &&
+        note.numberDay === currentDayIndex + 1 &&
+        note.number === number &&
+        note.lesson === this.row.lesson
+      );
     },
 
     displayTeachers() {

@@ -3,7 +3,7 @@ export function convertNumberToTime(number) {
   if (!number) return '';
   const isSaturday = number > 10;
   const normalizedNumber = isSaturday ? number - 10 : number;
-  
+
   const timeMap = {
     1: '08:00<br>09:30',
     2: '09:45<br>11:15',
@@ -12,7 +12,7 @@ export function convertNumberToTime(number) {
     5: isSaturday ? '15:00<br>16:30' : '15:35<br>17:05',
     6: isSaturday ? '16:45<br>18:15' : '17:20<br>18:50'
   };
-  
+
   return timeMap[normalizedNumber] || '';
 }
 
@@ -30,7 +30,7 @@ export function getNumberFromTime(time, isSaturday = false) {
     '15:00<br>16:30': 15,
     '16:45<br>18:15': 16
   };
-  
+
   return timeMap[time] || 0;
 }
 
@@ -38,29 +38,46 @@ export function getNumberFromTime(time, isSaturday = false) {
 export function convertToDate(weekNumber, dayNumber) {
   const today = new Date();
   const currentWeek = getAcademicWeekNumber(today);
-  
+
   // Вычисляем разницу в неделях
   const weekDiff = weekNumber - currentWeek;
-  
+
   // Находим понедельник текущей недели
   const monday = new Date(today);
   monday.setDate(today.getDate() - (today.getDay() + 6) % 7);
-  
+
   // Целевая дата
   const targetDate = new Date(monday);
   targetDate.setDate(monday.getDate() + (weekDiff * 7) + (dayNumber - 1));
-  
+
   return targetDate.toISOString().split('T')[0];
 }
 
 function getAcademicWeekNumber(date = new Date()) {
   const startOfYear = new Date(2024, 8, 1); // 8 = сентябрь
-  
+
   if (date < startOfYear) {
     startOfYear.setFullYear(startOfYear.getFullYear() - 1);
   }
 
   const diffTime = date - startOfYear;
   const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
-  return ((diffWeeks + 1) % 2) + 1;
+
+  // Если воскресенье, считаем его частью следующей недели
+  if (date.getDay() === 0) {
+    return ((diffWeeks + 1) % 2) + 1;
+  }
+
+  return ((diffWeeks) % 2) + 1;
+}
+
+
+export function getCurrentLessonPosition(time, dayIndex, weekNumber) {
+  const isSaturday = dayIndex === 5;
+  const number = getNumberFromTime(time, isSaturday);
+  return {
+    numberWeek: weekNumber,
+    numberDay: dayIndex + 1,
+    number: number || 1
+  };
 }

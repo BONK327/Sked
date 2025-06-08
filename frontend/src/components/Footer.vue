@@ -121,7 +121,7 @@ export default {
         transform: none
 
 .footer
-  @media (orientation: landscape) and (max-width: 1025px)
+  @media (orientation: landscape)
     position: fixed
     top: 0
     right: 0

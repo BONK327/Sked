@@ -29,6 +29,7 @@
 
 <script>
 import { mapActions, mapGetters } from 'vuex'
+import { getNumberFromTime } from '@/components/utils/notes'
 
 export default {
   name: 'AddNoteModal',
@@ -40,7 +41,7 @@ export default {
     }
   },
   computed: {
-    ...mapGetters(['isAddNoteModalOpen', 'availableLessons', 'allNotes', 'selectedDay', 'currentWeekSchedule', 'selectedDayIndex']),
+    ...mapGetters(['isAddNoteModalOpen', 'availableLessons', 'allNotes', 'selectedDay', 'currentWeekSchedule', 'selectedDayIndex', 'currentWeekNumber']),
     isOpen() {
       return this.isAddNoteModalOpen
     },
@@ -48,8 +49,18 @@ export default {
       return this.selectedDay?.originalDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
     },
     todaysLessons() {
-      // Get lessons for the currently selected day
-      return this.currentWeekSchedule[this.selectedDayIndex] || []
+      const lessons = this.currentWeekSchedule[this.selectedDayIndex] || [];
+      return lessons.map(lesson => {
+        const isSaturday = this.selectedDayIndex === 5;
+        const number = getNumberFromTime(lesson.time, isSaturday);
+
+        return {
+          ...lesson,
+          numberWeek: this.currentWeekNumber,
+          numberDay: this.selectedDayIndex + 1,
+          number: number
+        };
+      }).filter(lesson => lesson.lesson && lesson.number);
     }
   },
   methods: {
@@ -83,14 +94,54 @@ export default {
       this.closeAddNoteModal()
     },
     hasNoteForLesson(lesson) {
-      if (!this.allNotes) return false;
-      return this.allNotes.some(note =>
-        note.date === this.selectedDate &&
-        note.time === lesson.time &&
-        (note.source === 'local' || note.lesson === lesson.lesson)
-      );
+      if (!this.allNotes || !lesson) return false;
+
+      // Получаем корректные параметры урока
+      const isSaturday = this.selectedDayIndex === 5;
+      const number = getNumberFromTime(lesson.time, isSaturday);
+      const numberWeek = this.currentWeekNumber;
+      const numberDay = this.selectedDayIndex + 1;
+
+      console.log("Checking note for lesson:", {
+        lessonWeek: numberWeek,
+        lessonDay: numberDay,
+        lessonNumber: number
+      });
+
+      return this.allNotes.some(note => {
+        // Для серверных заметок
+        if (note.source === 'server') {
+          const serverMatch = note.numberWeek == numberWeek &&
+            note.numberDay == numberDay &&
+            note.number == number;
+
+          console.log("Server note check:", {
+            noteWeek: note.numberWeek,
+            noteDay: note.numberDay,
+            noteNumber: note.number,
+            match: serverMatch
+          });
+
+          return serverMatch;
+        }
+
+        // Для локальных заметок
+        const localMatch = note.numberWeek == numberWeek &&
+          note.numberDay == numberDay &&
+          note.number == number;
+
+        console.log("Local note check:", {
+          noteWeek: note.numberWeek,
+          noteDay: note.numberDay,
+          noteNumber: note.number,
+          match: localMatch
+        });
+
+        return localMatch;
+      });
     },
     async handleAddNote(lesson) {
+      if (this.hasNoteForLesson(lesson)) return;
       try {
         // Получаем данные для заметки в зависимости от типа поиска
         let noteData = {
@@ -98,7 +149,10 @@ export default {
           lesson: lesson.lesson,
           time: lesson.time,
           content: '',
-          date: this.selectedDate
+          date: this.selectedDate,
+          numberWeek: this.currentWeekNumber,
+          numberDay: this.selectedDayIndex + 1,
+          number: getNumberFromTime(lesson.time, this.selectedDayIndex === 5)
         };
 
         // Добавляем дополнительные поля в зависимости от типа поиска
@@ -172,11 +226,6 @@ export default {
     background: var(--tg-bg-color)
     box-shadow: 0 .4rem 2rem rgba(0, 0, 0, 0.3)
 
-@media (orientation: landscape) and (max-width: 1025px)Add commentMore actions
-  .modal
-    height: 100vh
-    overflow-y: auto 
-    
 .modal-header
   display: flex
   justify-content: space-between

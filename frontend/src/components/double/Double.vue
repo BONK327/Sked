@@ -288,7 +288,7 @@ export default {
         box-shadow: 0 0.2rem 0.5rem rgba(0, 0, 0, 0.3)
 
 // Медиазапросы
-@media (orientation: landscape) and (max-width: 1025px)
+@media (orientation: landscape)
   .double-search-block
     padding: 0.5rem 1rem
     flex-wrap: nowrap

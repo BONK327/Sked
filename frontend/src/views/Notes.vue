@@ -6,7 +6,7 @@
         :class="{ 'note-item--active': note.id === activeNoteId }" :data-note-id="note.id">
         <div class="note-header">
           <div class="note-meta">
-            <span class="note-date">{{ formatDate(note.date) }}</span>
+            <span class="note-date">{{ formatWeekInfo(note) }}</span>
             <span class="note-time">{{ note.time }}</span>
           </div>
           <div class="note-actions">
@@ -151,6 +151,31 @@ export default {
     cancelEditing() {
       this.editingNote = null
     },
+
+
+
+    formatDay(dayNumber) {
+      const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+      return days[dayNumber - 1] || '';
+    },
+
+    formatWeekInfo(note) {
+      return `Неделя ${note.numberWeek}, ${this.formatDay(note.numberDay)}`;
+    },
+
+    hasNoteForLesson(lesson) {
+      if (!this.allNotes) return false;
+      const pos = this.$store.getters.getLessonPosition(lesson);
+      return this.allNotes.some(note =>
+        note.numberWeek === pos.numberWeek &&
+        note.numberDay === pos.numberDay &&
+        note.number === pos.number
+      );
+    },
+
+
+
+
     async saveNote() {
       try {
         if (this.editingNote) {
@@ -599,6 +624,6 @@ export default {
   font-size: 1.1rem
 
 .notes
-  @media (orientation: landscape) and (max-width: 1025px)
+  @media (orientation: landscape)
     height: 100vh
 </style>
