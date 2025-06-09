@@ -8,7 +8,6 @@ const sequelize = new Sequelize(
     {
         host: process.env.DATABASE_HOST,
         dialect: 'mysql',
-        // logging: db.log
         define: {
             timestamps: false,
             underscored: true
@@ -16,5 +15,9 @@ const sequelize = new Sequelize(
         timezone: "+03:00"
     }
 );
+
+sequelize.authenticate()
+    .then(() => console.log('Database connected'))
+    .catch(err => console.error('Unable to connect:', err));
 
 module.exports = sequelize;
