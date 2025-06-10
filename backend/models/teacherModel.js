@@ -1,6 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
+
 const TeacherModel = sequelize.define("Teacher",
     {
         id: {
@@ -36,4 +37,27 @@ const TeacherModel = sequelize.define("Teacher",
     }
 )
 
-module.exports = TeacherModel;
+
+const associate = models => {
+    TeacherModel.hasMany(
+        models.RelationshipUser,
+        {
+            foreignKey: "teacherId",
+            as: "relationshipsUsers"
+        }
+    );
+
+    TeacherModel.hasMany(
+        models.Lesson,
+        {
+            foreignKey: "teacherId",
+            as: "lessons"
+        }
+    )
+}
+
+
+module.exports = {
+    model: TeacherModel,
+    associate
+};

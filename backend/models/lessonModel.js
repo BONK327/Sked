@@ -1,8 +1,6 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
-const TeacherModel = require("./TeacherModel");
-const RoomModel = require("./RoomModel");
-const GroupModel = require("./GroupModel");
+
 
 const LessonModel = sequelize.define("Lesson",
     {
@@ -54,29 +52,35 @@ const LessonModel = sequelize.define("Lesson",
     }
 )
 
-LessonModel.belongsTo(
-    TeacherModel,
-    {
-        foreignKey: "teacherId",
-        as: "teacher"
-    }
-)
 
-LessonModel.belongsTo(
-    RoomModel,
-    {
-        foreignKey: "roomId",
-        as: "room"
-    }
-)
+const associate = models => {
+    LessonModel.belongsTo(
+        models.Teacher,
+        {
+            foreignKey: "teacherId",
+            as: "teacher"
+        }
+    )
 
-LessonModel.belongsTo(
-    GroupModel,
-    {
-        foreignKey: "groupId",
-        as: "group"
-    }
-)
+    LessonModel.belongsTo(
+        models.Room,
+        {
+            foreignKey: "roomId",
+            as: "room"
+        }
+    )
+
+    LessonModel.belongsTo(
+        models.Group,
+        {
+            foreignKey: "groupId",
+            as: "group"
+        }
+    )
+}
 
 
-module.exports = LessonModel;
+module.exports = {
+    model: LessonModel,
+    associate
+};

@@ -1,6 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
+
 const GroupModel = sequelize.define("Group",
     {
         id: {
@@ -25,4 +26,26 @@ const GroupModel = sequelize.define("Group",
     }
 )
 
-module.exports = GroupModel;
+
+const associate = models => {
+    GroupModel.hasMany(
+        models.RelationshipUser,
+        {
+            foreignKey: "groupId",
+            as: "relationshipsUsers"
+        }
+    );
+    GroupModel.hasMany(
+        models.Lesson,
+        {
+            foreignKey: "groupId",
+            as: "lessons"
+        }
+    )
+}
+
+
+module.exports = {
+    model: GroupModel,
+    associate
+};

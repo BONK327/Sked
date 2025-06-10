@@ -1,6 +1,6 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
-const UserModel = require("./UserModel");
+
 
 const NoteModel = sequelize.define("Note",
     {
@@ -32,24 +32,27 @@ const NoteModel = sequelize.define("Note",
         }
     }, {
         tableName: 'notes',
-        indexes: [
-            {
-                name: 'user_id',
-                unique: true,
-                fields: ['user_id', 'number_week', 'number_day', 'number']
-            }
-        ]
+        indexes: [{
+            name: 'user_id',
+            unique: true,
+            fields: ['user_id', 'number_week', 'number_day', 'number']
+        }]
     }
 );
 
 
-NoteModel.belongsTo(
-    UserModel,
-    {
-        foreignKey: "userId",
-        as: "user"
-    }
-);
+const associate = models => {
+    NoteModel.belongsTo(
+        models.User,
+        {
+            foreignKey: "userId",
+            as: "user"
+        }
+    );
+}
 
 
-module.exports = NoteModel;
+module.exports = {
+    model: NoteModel,
+    associate
+};

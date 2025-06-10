@@ -1,6 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
+
 const RoomModel = sequelize.define("Room",
     {
         id: {
@@ -25,4 +26,19 @@ const RoomModel = sequelize.define("Room",
     }
 )
 
-module.exports = RoomModel;
+
+const associate = models => {
+    RoomModel.hasMany(
+        models.Lesson,
+        {
+            foreignKey: "roomId",
+            as: "lessons"
+        }
+    );
+}
+
+
+module.exports = {
+    model: RoomModel,
+    associate
+};

@@ -19,7 +19,7 @@ const UserModel = sequelize.define("User",
         },
         notifications: {
             type: DataTypes.BOOLEAN,
-            defaultValue: 1
+            defaultValue: true
         }
     }, {
         tableName: 'users',
@@ -27,4 +27,26 @@ const UserModel = sequelize.define("User",
 )
 
 
-module.exports = UserModel;
+const associate = models => {
+    UserModel.hasMany(
+        models.Note,
+        {
+            foreignKey: 'userId',
+            as: 'notes'
+        }
+    );
+    
+    UserModel.hasOne(
+        models.RelationshipUser,
+        {
+            foreignKey: 'userId',
+            as: 'relationshipUser'
+        }
+    )
+}
+
+
+module.exports = {
+    model: UserModel,
+    associate
+};

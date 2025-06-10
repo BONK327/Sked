@@ -1,19 +1,13 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
-const UserModel = require("./UserModel");
-const GroupModel = require("./GroupModel");
-const TeacherModel = require("./TeacherModel");
 
-const RelationshipsUsersModel = sequelize.define("RelationshipUser",
+
+const RelationshipUserModel = sequelize.define("RelationshipUser",
     {
         userId: {
             type: DataTypes.BIGINT.UNSIGNED,
             primaryKey: true,
-            allowNull: false,
-            references: {
-                model: UserModel,
-                key: 'id'
-            }
+            allowNull: false
         },
         groupId: {
             type: DataTypes.INTEGER.UNSIGNED,
@@ -33,21 +27,34 @@ const RelationshipsUsersModel = sequelize.define("RelationshipUser",
 )
 
 
-RelationshipsUsersModel.belongsTo(
-    GroupModel,
-    {
-        foreignKey: "groupId",
-        as: "group"
-    }
-)
+const associate = models => {
+    RelationshipUserModel.belongsTo(
+        models.User,
+        {
+            foreignKey: "userId",
+            as: "user"
+        }
+    );
+    
+    RelationshipUserModel.belongsTo(
+        models.Group,
+        {
+            foreignKey: "groupId",
+            as: "group"
+        }
+    );
 
-RelationshipsUsersModel.belongsTo(
-    TeacherModel,
-    {
-        foreignKey: "teacherId",
-        as: "teacher"
-    }
-)
+    RelationshipUserModel.belongsTo(
+        models.Teacher,
+        {
+            foreignKey: "teacherId",
+            as: "teacher"
+        }
+    );
+}
 
 
-module.exports = RelationshipsUsersModel;
+module.exports = {
+    model: RelationshipUserModel,
+    associate
+};
