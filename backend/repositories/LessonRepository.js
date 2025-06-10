@@ -1,6 +1,7 @@
 const models = require("../models/models.js");
 const { col, fn } = require("sequelize");
 
+
 class LessonRepository {
     constructor() {
         this.model = models.LessonModel;
@@ -99,7 +100,6 @@ class LessonRepository {
         return await this.model.destroy({ where: { id } });
     }
 }
-
 
 
 module.exports = LessonRepository;
