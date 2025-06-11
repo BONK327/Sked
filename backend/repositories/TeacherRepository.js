@@ -10,7 +10,7 @@ class TeacherRepository {
         return await this.model.findAll({ order: [["name", "ASC"]], raw: true });
     }
 
-    async findOneByName(shortname) {
+    async findOneByShortname(shortname) {
         return await this.model.findOne({ where: { shortname }, raw: true });
     }
 
