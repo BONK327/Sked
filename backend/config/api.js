@@ -1,8 +1,13 @@
+const Axios = require("axios");
 require('dotenv').config();
 
-module.exports = {
-    baseUrl: process.env.API_BASE_URL,
-    token: process.env.API_TOKEN,
-    username: process.env.API_LOGIN,
-    password: process.env.API_PASSWORD
-};
+
+const axios = Axios.create({
+    baseURL: process.env.API_BASE_URL,
+    headers: {
+        Token: process.env.API_TOKEN,
+        Authorization: `Basic ${Buffer.from(`${process.env.API_LOGIN}:${process.env.API_PASSWORD}`).toString('base64')}`
+    }
+})
+
+module.exports = axios;
